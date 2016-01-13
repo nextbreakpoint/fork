@@ -6,7 +6,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.junit.Rule;
 import org.junit.Test;
@@ -19,30 +20,30 @@ public class ForkTest {
 	@Test
 	public void join_givenCollectorReturnsUnmodificedValueAndTaskSuppliesString_shouldCallSupply() throws Exception {
 		@SuppressWarnings("unchecked")
-		ForkTask<String, Exception> task = mock(ForkTask.class);
-		Fork.of((String x) -> x).execute(task).collect();
+		TrySupplier<Object> task = mock(TrySupplier.class);
+		Fork.of(Collectors.reducing((a, t) -> t)).execute(task).collect();
 		verify(task, times(1)).supply();
 	}
 
 	@Test
 	public void join_givenCollectorReturnsUnmodificedValueAndTaskSuppliesString_shouldCallSupplyInNewThread() {
 		final Thread mainThread = Thread.currentThread();
-		ForkTask<String, Exception> task = () -> {
+		TrySupplier<Object> task = () -> {
 			assertTrue(Thread.currentThread() != mainThread);
 			return null;
 		};
-		Fork.of((String x) -> x).execute(task).collect();
+		Fork.of(Collectors.reducing((a, t) -> t)).execute(task).collect();
 	}
 
 	@Test
 	public void join_givenCollectorReturnsUnmodificedValueAndTaskThrowsException_shouldReturnFailure() {
-		Try<List<String>, Exception> result = Fork.of((String x) -> x).execute(() -> { throw new Exception(); }).collect();
+		Try<Optional<Object>, Exception> result = Fork.of(Collectors.reducing((a, t) -> t)).execute(() -> { throw new Exception(); }).collect();
 		assertTrue(result.isFailure());
 	}
 
 	@Test
 	public void join_givenCollectorReturnsUnmodificedValueAndTaskSuppliesString_shouldReturnSuppliedString() {
-		Try<List<String>, Exception> result = Fork.of((String x) -> x).execute(() -> "X").collect();
-		assertEquals("X", result.value().get().get(0));
+		Try<String, Exception> result = Fork.of(Collectors.reducing("Y", (String a, String t) -> t)).execute(() -> "X").collect();
+		assertEquals("X", result.value().get());
 	}
 }
