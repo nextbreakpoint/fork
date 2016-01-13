@@ -1,6 +1,6 @@
 package com.nextbreakpoint;
 
 @FunctionalInterface
-public interface ForkTask<T> {
-	public T supply();
+public interface ForkTask<T,E extends Exception> {
+	public T supply() throws E;
 }

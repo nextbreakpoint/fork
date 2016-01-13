@@ -67,11 +67,16 @@
 			<version>1.9.5</version>
 			<scope>test</scope>
 		</dependency>
+		<dependency>
+			<groupId>com.nextbreakpoint</groupId>
+			<artifactId>com.nextbreakpoint.try</artifactId>
+			<version>1.0</version>
+		</dependency>
 	</dependencies>
 	<distributionManagement>
 		<repository>
 			<id>maven-repository</id>
-			<url>file://${project.build.directory}/maven-repository</url>
+			<url>file://${user.home}/maven-repository</url>
 		</repository>
 	</distributionManagement>
 </project>
