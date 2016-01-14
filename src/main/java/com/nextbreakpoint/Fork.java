@@ -28,11 +28,11 @@ public class Fork<T, A, R, E extends Throwable> {
 	}
 
 	public static <T, A, R, E extends Throwable> Fork<T, A, R, E> of(Function<Throwable, E> mapper, Collector<T, A, R> collector) {
-		return new Fork<T, A, R, E>(defaultExecutor(), mapper, collector, Collections.emptyList());
+		return of(defaultExecutor(), mapper, collector);
 	}
 
 	public static <T, A, R> Fork<T, A, R, Throwable> of(Collector<T, A, R> collector) {
-		return new Fork<T, A, R, Throwable>(defaultExecutor(), defaultMapper(), collector, Collections.emptyList());
+		return of(defaultMapper(), collector);
 	}
 
 	private static ExecutorService defaultExecutor() {
