@@ -7,6 +7,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import java.util.Optional;
+import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
 import org.junit.Rule;
@@ -20,15 +21,15 @@ public class ForkTest {
 	@Test
 	public void join_givenCollectorReturnsUnmodificedValueAndTaskSuppliesString_shouldCallSupply() throws Exception {
 		@SuppressWarnings("unchecked")
-		TrySupplier<Object> task = mock(TrySupplier.class);
+		Callable<Object> task = mock(Callable.class);
 		Fork.of(Collectors.reducing((a, t) -> t)).execute(task).collect();
-		verify(task, times(1)).supply();
+		verify(task, times(1)).call();
 	}
 
 	@Test
 	public void join_givenCollectorReturnsUnmodificedValueAndTaskSuppliesString_shouldCallSupplyInNewThread() {
 		final Thread mainThread = Thread.currentThread();
-		TrySupplier<Object> task = () -> {
+		Callable<Object> task = () -> {
 			assertTrue(Thread.currentThread() != mainThread);
 			return null;
 		};
@@ -37,13 +38,13 @@ public class ForkTest {
 
 	@Test
 	public void join_givenCollectorReturnsUnmodificedValueAndTaskThrowsException_shouldReturnFailure() {
-		Try<Optional<Object>, Exception> result = Fork.of(Collectors.reducing((a, t) -> t)).execute(() -> { throw new Exception(); }).collect();
+		Try<Optional<Object>, Throwable> result = Fork.of(Collectors.reducing((a, t) -> t)).execute(() -> { throw new Exception(); }).collect();
 		assertTrue(result.isFailure());
 	}
 
 	@Test
 	public void join_givenCollectorReturnsUnmodificedValueAndTaskSuppliesString_shouldReturnSuppliedString() {
-		Try<String, Exception> result = Fork.of(Collectors.reducing("Y", (String a, String t) -> t)).execute(() -> "X").collect();
+		Try<String, Throwable> result = Fork.of(Collectors.reducing("Y", (String a, String t) -> t)).execute(() -> "X").collect();
 		assertEquals("X", result.value().get());
 	}
 }
