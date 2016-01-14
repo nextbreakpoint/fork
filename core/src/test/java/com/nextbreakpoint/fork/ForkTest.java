@@ -1,4 +1,4 @@
-package com.nextbreakpoint;
+package com.nextbreakpoint.fork;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -14,6 +14,8 @@ import java.util.stream.Collectors;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+
+import com.nextbreakpoint.Try;
 
 public class ForkTest {
 	@Rule

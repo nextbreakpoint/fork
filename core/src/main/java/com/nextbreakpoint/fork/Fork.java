@@ -1,4 +1,4 @@
-package com.nextbreakpoint;
+package com.nextbreakpoint.fork;
 
 import java.util.Collections;
 import java.util.List;
@@ -9,6 +9,8 @@ import java.util.concurrent.Future;
 import java.util.function.Function;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
+
+import com.nextbreakpoint.Try;
 
 public class Fork<T, A, R, E extends Throwable> {
 	private final Function<Throwable, E> mapper;
