@@ -1,6 +1,7 @@
 package com.nextbreakpoint;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -22,7 +23,7 @@ public class ForkTest {
 	public void join_givenCollectorReturnsUnmodificedValueAndTaskSuppliesString_shouldCallSupply() throws Exception {
 		@SuppressWarnings("unchecked")
 		Callable<Object> task = mock(Callable.class);
-		Fork.of(Collectors.reducing((a, t) -> t)).execute(task).collect();
+		Fork.of(Collectors.reducing((a, t) -> t)).submit(task).join();
 		verify(task, times(1)).call();
 	}
 
@@ -33,18 +34,30 @@ public class ForkTest {
 			assertTrue(Thread.currentThread() != mainThread);
 			return null;
 		};
-		Fork.of(Collectors.reducing((a, t) -> t)).execute(task).collect();
+		Fork.of(Collectors.reducing((a, t) -> t)).submit(task).join();
 	}
 
 	@Test
 	public void join_givenCollectorReturnsUnmodificedValueAndTaskThrowsException_shouldReturnFailure() {
-		Try<Optional<Object>, Throwable> result = Fork.of(Collectors.reducing((a, t) -> t)).execute(() -> { throw new Exception(); }).collect();
+		Try<Optional<Object>, Throwable> result = Fork.of(Collectors.reducing((a, t) -> t)).submit(() -> { throw new Exception(); }).join();
 		assertTrue(result.isFailure());
+	}
+	
+	@Test
+	public void join_givenCollectorReturnsUnmodificedValueAndTaskReturnsNull_shouldReturnEmptyOptional() {
+		Try<String, Throwable> result = Fork.of(Collectors.reducing("Y", (a, t) -> t)).submit(() -> null).join();
+		assertFalse(result.value().isPresent());
 	}
 
 	@Test
-	public void join_givenCollectorReturnsUnmodificedValueAndTaskSuppliesString_shouldReturnSuppliedString() {
-		Try<String, Throwable> result = Fork.of(Collectors.reducing("Y", (String a, String t) -> t)).execute(() -> "X").collect();
+	public void join_givenCollectorReturnsUnmodificedValueAndTaskReturnsString_shouldReturnSuccess() {
+		Try<String, Throwable> result = Fork.of(Collectors.reducing("Y", (a, t) -> t)).submit(() -> "X").join();
+		assertFalse(result.isFailure());
+	}
+
+	@Test
+	public void join_givenCollectorReturnsUnmodificedValueAndTaskReturnsString_shouldReturnSameString() {
+		Try<String, Throwable> result = Fork.of(Collectors.reducing("Y", (a, t) -> t)).submit(() -> "X").join();
 		assertEquals("X", result.value().get());
 	}
 }

@@ -35,31 +35,39 @@ public class Fork<T, A, R, E extends Throwable> {
 		return new Fork<T, A, R, Throwable>(defaultExecutor(), defaultMapper(), collector, Collections.emptyList());
 	}
 
-	public Fork<T, A, R, E> execute(Callable<T> task) {
-		return execute(Collections.singletonList(task));
-	}
-
-	public Fork<T, A, R, E> execute(List<Callable<T>> tasks) {
-		return new Fork<T, A, R, E>(executor, mapper, collector, tasks.stream().map(task -> executor.submit(() -> task.call())).collect(Collectors.toList()));
-	}
-
 	private static ExecutorService defaultExecutor() {
-		return Executors.newFixedThreadPool(10);
+		return Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 	}
 
 	private static Function<Throwable, Throwable> defaultMapper() {
 		return x -> x;
 	}
 
-	public Try<R, E> collect() {
+	public Fork<T, A, R, E> submit(List<Callable<T>> tasks) {
+		return new Fork<T, A, R, E>(executor, mapper, collector, tasks.stream().map(task -> executor.submit(() -> task.call())).collect(Collectors.toList()));
+	}
+
+	public Fork<T, A, R, E> submit(Callable<T> task) {
+		return submit(Collections.singletonList(task));
+	}
+
+	public Try<R, E> join() {
 		try {
-			return Try.of(mapper, () -> futures.stream().map(future -> collectSingle(future)).collect(collector));
-		} catch (Exception e) {
+			return Try.success(mapper, futures.stream().map(future -> joinSingle(future)).collect(collector));
+		} catch (ForkException e) {
 			return Try.failure(mapper, mapper.apply(e.getCause()));
 		}
 	}
 
-	private T collectSingle(Future<T> future) {
-		return Try.of(e -> new RuntimeException(e), () -> future.get()).getOrThrow();
+	private T joinSingle(Future<T> future) {
+		return Try.of(e -> new ForkException(e), () -> future.get()).getOrThrow(null);
+	}
+	
+	private static class ForkException extends RuntimeException {
+		private static final long serialVersionUID = 1L;
+
+		public ForkException(Throwable e) {
+			super("Task failed", e);
+		}
 	}
 }
