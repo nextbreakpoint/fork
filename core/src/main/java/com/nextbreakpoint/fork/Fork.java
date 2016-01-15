@@ -1,5 +1,6 @@
 package com.nextbreakpoint.fork;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -46,7 +47,14 @@ public class Fork<T, A, R, E extends Throwable> {
 	}
 
 	public Fork<T, A, R, E> submit(List<Callable<T>> tasks) {
-		return new Fork<T, A, R, E>(executor, mapper, collector, tasks.stream().map(task -> executor.submit(() -> task.call())).collect(Collectors.toList()));
+		return new Fork<T, A, R, E>(executor, mapper, collector, merge(futures, tasks.stream().map(task -> executor.submit(() -> task.call())).collect(Collectors.toList())));
+	}
+
+	private List<Future<T>> merge(List<Future<T>> list1, List<Future<T>> list2) {
+		ArrayList<Future<T>> list = new ArrayList<>();
+		list.addAll(list1);
+		list.addAll(list2);
+		return list;
 	}
 
 	public Fork<T, A, R, E> submit(Callable<T> task) {

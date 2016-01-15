@@ -7,6 +7,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
@@ -20,6 +22,18 @@ import com.nextbreakpoint.Try;
 public class ForkTest {
 	@Rule
 	public ExpectedException exception = ExpectedException.none();
+
+	@Test
+	public void join_givenCollectorReturnsUnmodificedValue_shouldReturnSuccess() {
+		Try<String, Throwable> result = Fork.of(Collectors.reducing("", (a, t) -> t)).join();
+		assertFalse(result.isFailure());
+	}
+
+	@Test
+	public void join_givenCollectorReturnsUnmodificedValue_shouldReturnEmptyOptional() {
+		Try<String, Throwable> result = Fork.of(Collectors.reducing("", (a, t) -> t)).join();
+		assertEquals("", result.get());
+	}
 
 	@Test
 	public void join_givenCollectorReturnsUnmodificedValueAndTaskSuppliesString_shouldCallSupply() throws Exception {
@@ -47,19 +61,46 @@ public class ForkTest {
 	
 	@Test
 	public void join_givenCollectorReturnsUnmodificedValueAndTaskReturnsNull_shouldReturnEmptyOptional() {
-		Try<String, Throwable> result = Fork.of(Collectors.reducing("Y", (a, t) -> t)).submit(() -> null).join();
+		Try<String, Throwable> result = Fork.of(Collectors.reducing("", (a, t) -> t)).submit(() -> null).join();
 		assertFalse(result.value().isPresent());
 	}
 
 	@Test
 	public void join_givenCollectorReturnsUnmodificedValueAndTaskReturnsString_shouldReturnSuccess() {
-		Try<String, Throwable> result = Fork.of(Collectors.reducing("Y", (a, t) -> t)).submit(() -> "X").join();
+		Try<String, Throwable> result = Fork.of(Collectors.reducing("", (a, t) -> t)).submit(() -> "X").join();
 		assertFalse(result.isFailure());
 	}
 
 	@Test
-	public void join_givenCollectorReturnsUnmodificedValueAndTaskReturnsString_shouldReturnSameString() {
-		Try<String, Throwable> result = Fork.of(Collectors.reducing("Y", (a, t) -> t)).submit(() -> "X").join();
+	public void join_givenCollectorReturnsUnmodificedValueAndTaskReturnsString_shouldReturnSameString_whenSubmittingSingleTask() {
+		Try<String, Throwable> result = Fork.of(Collectors.reducing("", (a, t) -> t)).submit(() -> "X").join();
 		assertEquals("X", result.value().get());
+	}
+
+	@Test
+	public void join_givenCollectorConcatenatesValuesAndTaskReturnsString_shouldReturnConcatenatedStrings_whenSubmittingMultipleTasks() {
+		Try<String, Throwable> result = Fork.of(Collectors.reducing("", (a, t) -> a + t)).submit(() -> "X").submit(() -> "Y").join();
+		assertEquals("XY", result.value().get());
+	}
+
+	@Test
+	public void join_givenCollectorConcatenatesValuesAndTaskReturnsString_shouldReturnConcatenatedStrings_whenSubmittingListOfTasks() {
+		List<Callable<String>> tasks = new ArrayList<>();
+		tasks.add(() -> "Y");
+		tasks.add(() -> "X");
+		Try<String, Throwable> result = Fork.of(Collectors.reducing("", (a, t) -> a + t)).submit(tasks).join();
+		assertEquals("YX", result.value().get());
+	}
+
+	@Test
+	public void join_givenCollectorConcatenatesValuesAndTaskReturnsString_shouldReturnConcatenatedStrings_whenSubmittingMultipleListOfTasks() {
+		List<Callable<String>> tasks1 = new ArrayList<>();
+		tasks1.add(() -> "Y");
+		tasks1.add(() -> "X");
+		List<Callable<String>> tasks2 = new ArrayList<>();
+		tasks2.add(() -> "X");
+		tasks2.add(() -> "Y");
+		Try<String, Throwable> result = Fork.of(Collectors.reducing("", (a, t) -> a + t)).submit(tasks1).submit(tasks2).join();
+		assertEquals("YXXY", result.value().get());
 	}
 }
