@@ -80,4 +80,8 @@ public class Fork<T, A, R, E extends Throwable> {
 			super("Task failed", e);
 		}
 	}
+	
+	public void shutdown() {
+		executor.shutdown();
+	}
 }
