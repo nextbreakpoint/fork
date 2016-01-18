@@ -67,8 +67,4 @@ public class Fork<T, E extends Throwable> {
 	private <X extends Throwable> Try<T, X> joinSingle(Function<Throwable, X> mapper, Future<T> future) {
 		return Try.of(mapper, () -> future.get());
 	}
-
-	public void shutdown() {
-		executor.shutdown();
-	}
 }
