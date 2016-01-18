@@ -16,25 +16,23 @@ public class Fork<T, E extends Throwable> {
 	private final Function<Throwable, E> mapper;
 	private final ExecutorService executor;
 	private final List<Future<T>> futures;
-	private final Class<T> clazz;
 
-	private Fork(ExecutorService executor, Function<Throwable, E> mapper, List<Future<T>> futures, Class<T> clazz) {
+	private Fork(ExecutorService executor, Function<Throwable, E> mapper, List<Future<T>> futures) {
 		this.executor = executor;
 		this.futures = futures;
 		this.mapper = mapper;
-		this.clazz = clazz;
 	}
 
 	public static <T, E extends Throwable> Fork<T, E> of(ExecutorService executor, Function<Throwable, E> mapper, Class<T> clazz) {
-		return new Fork<T, E>(executor, mapper, Collections.emptyList(), clazz);
+		return new Fork<T, E>(executor, mapper, Collections.emptyList());
 	}
 
 	public static <T> Fork<T, Throwable> of(ExecutorService executor, Class<T> clazz) {
-		return new Fork<T, Throwable>(executor, defaultMapper(), Collections.emptyList(), clazz);
+		return of(executor, defaultMapper(), clazz);
 	}
 
 	public Fork<T, E> submit(List<Callable<T>> tasks) {
-		return new Fork<T, E>(executor, mapper, merge(futures, tasks.stream().map(task -> executor.submit(() -> task.call())).collect(Collectors.toList())), clazz);
+		return new Fork<T, E>(executor, mapper, merge(futures, tasks.stream().map(task -> executor.submit(() -> task.call())).collect(Collectors.toList())));
 	}
 
 	public Fork<T, E> submit(Callable<T> task) {
@@ -47,9 +45,9 @@ public class Fork<T, E extends Throwable> {
 
 	public <R, A> Try<R, E> collectOrFail(Collector<T, A, R> collector) {
 		try {
-			return Try.success(mapper, futures.stream().map(future -> join(e -> new RuntimeException(e), future)).map(v -> v.getOrThrow()).collect(collector));
+			return Try.success(mapper, futures.stream().map(future -> join(e -> new ForkException(e), future)).map(v -> v.getOrThrow()).collect(collector));
 		} catch (RuntimeException e) {
-			return Try.failure(mapper, mapper.apply(e));
+			return Try.failure(mapper, mapper.apply(e.getCause()));
 		}
 	}
 
@@ -66,5 +64,13 @@ public class Fork<T, E extends Throwable> {
 
 	private static Function<Throwable, Throwable> defaultMapper() {
 		return x -> x;
+	}
+	
+	private static class ForkException extends RuntimeException {
+		private static final long serialVersionUID = 1L;
+
+		public ForkException(Throwable cause) {
+			super(cause);
+		}
 	}
 }

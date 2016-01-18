@@ -47,19 +47,19 @@ public class ForkTest {
 	@Test
 	public void collect_givenCollectorReturnsUnmodifiedValueAndTaskSuppliesString_shouldCallSupply() throws Exception {
 		@SuppressWarnings("unchecked")
-		Callable<Object> task = mock(Callable.class);
-		Fork.of(executor, Object.class).submit(task).collect(Collectors.reducing("", (a, t) -> t), "");
+		Callable<String> task = mock(Callable.class);
+		Fork.of(executor, String.class).submit(task).collect(Collectors.reducing("", (a, t) -> t), "");
 		verify(task, times(1)).call();
 	}
 
 	@Test
 	public void collect_givenCollectorReturnsUnmodifiedValueAndTaskSuppliesString_shouldCallSupplyInNewThread() {
 		final Thread mainThread = Thread.currentThread();
-		Callable<Object> task = () -> {
+		Callable<String> task = () -> {
 			assertTrue(Thread.currentThread() != mainThread);
 			return null;
 		};
-		Fork.of(executor, Object.class).submit(task).collect(Collectors.reducing("", (a, t) -> t), "");
+		Fork.of(executor, String.class).submit(task).collect(Collectors.reducing("", (a, t) -> t), "");
 	}
 
 	@Test

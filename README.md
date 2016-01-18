@@ -69,4 +69,4 @@ The output will be:
 
 	XYZ
 	XYZ
-	java.util.concurrent.ExecutionException: java.lang.Exception: Error
+	java.lang.Exception: Error
