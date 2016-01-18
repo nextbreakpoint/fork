@@ -33,12 +33,28 @@ public class Fork<T, E extends Throwable> {
 		return new Fork<T, Throwable>(executor, defaultMapper(), Collections.emptyList(), clazz);
 	}
 
-	private static Function<Throwable, Throwable> defaultMapper() {
-		return x -> x;
-	}
-
 	public Fork<T, E> submit(List<Callable<T>> tasks) {
 		return new Fork<T, E>(executor, mapper, merge(futures, tasks.stream().map(task -> executor.submit(() -> task.call())).collect(Collectors.toList())), clazz);
+	}
+
+	public Fork<T, E> submit(Callable<T> task) {
+		return submit(Collections.singletonList(task));
+	}
+
+	public <R, A> R collect(Collector<T, A, R> collector, T failureValue) {
+		return futures.stream().map(future -> join(mapper, future)).map(v -> v.getOrElse(failureValue)).collect(collector);
+	}
+
+	public <R, A> Try<R, E> collectOrFail(Collector<T, A, R> collector) {
+		try {
+			return Try.success(mapper, futures.stream().map(future -> join(e -> new RuntimeException(e), future)).map(v -> v.getOrThrow()).collect(collector));
+		} catch (RuntimeException e) {
+			return Try.failure(mapper, mapper.apply(e));
+		}
+	}
+
+	private <X extends Throwable> Try<T, X> join(Function<Throwable, X> mapper, Future<T> future) {
+		return Try.of(mapper, () -> future.get());
 	}
 
 	private List<Future<T>> merge(List<Future<T>> list1, List<Future<T>> list2) {
@@ -48,23 +64,7 @@ public class Fork<T, E extends Throwable> {
 		return list;
 	}
 
-	public Fork<T, E> submit(Callable<T> task) {
-		return submit(Collections.singletonList(task));
-	}
-
-	public <R, A> R collect(Collector<T, A, R> collector, T failureValue) {
-		return futures.stream().map(future -> joinSingle(mapper, future)).map(v -> v.getOrElse(failureValue)).collect(collector);
-	}
-
-	public <R, A> Try<R, E> collectOrFail(Collector<T, A, R> collector) {
-		try {
-			return Try.success(mapper, futures.stream().map(future -> joinSingle(e -> new RuntimeException(e), future)).map(v -> v.getOrThrow()).collect(collector));
-		} catch (RuntimeException e) {
-			return Try.failure(mapper, mapper.apply(e));
-		}
-	}
-
-	private <X extends Throwable> Try<T, X> joinSingle(Function<Throwable, X> mapper, Future<T> future) {
-		return Try.of(mapper, () -> future.get());
+	private static Function<Throwable, Throwable> defaultMapper() {
+		return x -> x;
 	}
 }
