@@ -1,6 +1,6 @@
 # Fork
 
-Fork implements a functional API for dealing with threads in Java 8
+Fork implements a functional API for executing parallel tasks in Java 8
 
 ## Example
 
