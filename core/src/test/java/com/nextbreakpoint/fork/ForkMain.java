@@ -1,5 +1,7 @@
 package com.nextbreakpoint.fork;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 public class ForkMain {
@@ -8,19 +10,21 @@ public class ForkMain {
 	private static final ServiceKO service3 = new ServiceKO();
 	
 	public static void main(String[] args) {
-		System.out.println(Fork.empty(String.class)
+		ExecutorService executor = defaultExecutor();
+		
+		System.out.println(Fork.of(executor, String.class)
 			.submit(() -> service1.doSomething())
 			.submit(() -> service2.doSomething())
 			.submit(() -> service3.doSomething())
 			.collect(Collectors.reducing("X", (a, t) -> a + t), ""));
 
-		Fork.empty(String.class)
+		Fork.of(executor, String.class)
 			.submit(() -> service1.doSomething())
 			.submit(() -> service2.doSomething())
 			.collectOrFail(Collectors.reducing("X", (a, t) -> a + t)).ifPresent(System.out::println);
 
 		try {
-			Fork.empty(String.class)
+			Fork.of(executor, String.class)
 				.submit(() -> service1.doSomething())
 				.submit(() -> service3.doSomething())
 				.collectOrFail(Collectors.reducing("X", (a, t) -> a + t)).ifPresentOrThrow(System.out::println);
@@ -28,7 +32,11 @@ public class ForkMain {
 			System.out.println(e.getMessage());
 		}
 		
-		System.exit(0);
+		executor.shutdown();
+	}
+
+	private static ExecutorService defaultExecutor() {
+		return Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 	}
 
 	private static interface Service {

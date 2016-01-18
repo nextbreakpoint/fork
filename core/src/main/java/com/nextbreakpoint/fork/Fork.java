@@ -5,7 +5,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.function.Function;
 import java.util.stream.Collector;
@@ -17,31 +16,21 @@ public class Fork<T, E extends Throwable> {
 	private final Function<Throwable, E> mapper;
 	private final ExecutorService executor;
 	private final List<Future<T>> futures;
+	private final Class<T> clazz;
 
-	private Fork(ExecutorService executor, Function<Throwable, E> mapper, List<Future<T>> futures) {
+	private Fork(ExecutorService executor, Function<Throwable, E> mapper, List<Future<T>> futures, Class<T> clazz) {
 		this.executor = executor;
 		this.futures = futures;
 		this.mapper = mapper;
+		this.clazz = clazz;
 	}
 
-	public static <T, E extends Throwable> Fork<T, E> of(ExecutorService executor, Function<Throwable, E> mapper) {
-		return new Fork<T, E>(executor, mapper, Collections.emptyList());
+	public static <T, E extends Throwable> Fork<T, E> of(ExecutorService executor, Function<Throwable, E> mapper, Class<T> clazz) {
+		return new Fork<T, E>(executor, mapper, Collections.emptyList(), clazz);
 	}
 
-	public static <T, E extends Throwable> Fork<T, E> of(Function<Throwable, E> mapper) {
-		return new Fork<T, E>(defaultExecutor(), mapper, Collections.emptyList());
-	}
-
-	public static <T> Fork<T, Throwable> of(ExecutorService executor) {
-		return new Fork<T, Throwable>(executor, defaultMapper(), Collections.emptyList());
-	}
-
-	public static <T> Fork<T, Throwable> empty(Class<T> clazz) {
-		return new Fork<T, Throwable>(defaultExecutor(), defaultMapper(), Collections.emptyList());
-	}
-
-	private static ExecutorService defaultExecutor() {
-		return Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+	public static <T> Fork<T, Throwable> of(ExecutorService executor, Class<T> clazz) {
+		return new Fork<T, Throwable>(executor, defaultMapper(), Collections.emptyList(), clazz);
 	}
 
 	private static Function<Throwable, Throwable> defaultMapper() {
@@ -49,7 +38,7 @@ public class Fork<T, E extends Throwable> {
 	}
 
 	public Fork<T, E> submit(List<Callable<T>> tasks) {
-		return new Fork<T, E>(executor, mapper, merge(futures, tasks.stream().map(task -> executor.submit(() -> task.call())).collect(Collectors.toList())));
+		return new Fork<T, E>(executor, mapper, merge(futures, tasks.stream().map(task -> executor.submit(() -> task.call())).collect(Collectors.toList())), clazz);
 	}
 
 	private List<Future<T>> merge(List<Future<T>> list1, List<Future<T>> list2) {
