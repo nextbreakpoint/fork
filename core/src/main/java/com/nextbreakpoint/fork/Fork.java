@@ -13,29 +13,31 @@ import java.util.stream.Collectors;
 
 import com.nextbreakpoint.Try;
 
-public class Fork<T, A, R, E extends Throwable> {
+public class Fork<T, E extends Throwable> {
 	private final Function<Throwable, E> mapper;
-	private final Collector<T,A,R> collector;
 	private final ExecutorService executor;
 	private final List<Future<T>> futures;
 
-	private Fork(ExecutorService executor, Function<Throwable, E> mapper, Collector<T, A, R> collector, List<Future<T>> futures) {
-		this.collector = collector;
+	private Fork(ExecutorService executor, Function<Throwable, E> mapper, List<Future<T>> futures) {
 		this.executor = executor;
 		this.futures = futures;
 		this.mapper = mapper;
 	}
 
-	public static <T, A, R, E extends Throwable> Fork<T, A, R, E> of(ExecutorService executor, Function<Throwable, E> mapper, Collector<T, A, R> collector) {
-		return new Fork<T, A, R, E>(executor, mapper, collector, Collections.emptyList());
+	public static <T, E extends Throwable> Fork<T, E> of(ExecutorService executor, Function<Throwable, E> mapper) {
+		return new Fork<T, E>(executor, mapper, Collections.emptyList());
 	}
 
-	public static <T, A, R, E extends Throwable> Fork<T, A, R, E> of(Function<Throwable, E> mapper, Collector<T, A, R> collector) {
-		return of(defaultExecutor(), mapper, collector);
+	public static <T, E extends Throwable> Fork<T, E> of(Function<Throwable, E> mapper) {
+		return new Fork<T, E>(defaultExecutor(), mapper, Collections.emptyList());
 	}
 
-	public static <T, A, R> Fork<T, A, R, Throwable> of(Collector<T, A, R> collector) {
-		return of(defaultMapper(), collector);
+	public static <T> Fork<T, Throwable> of(ExecutorService executor) {
+		return new Fork<T, Throwable>(executor, defaultMapper(), Collections.emptyList());
+	}
+
+	public static <T> Fork<T, Throwable> empty(Class<T> clazz) {
+		return new Fork<T, Throwable>(defaultExecutor(), defaultMapper(), Collections.emptyList());
 	}
 
 	private static ExecutorService defaultExecutor() {
@@ -46,8 +48,8 @@ public class Fork<T, A, R, E extends Throwable> {
 		return x -> x;
 	}
 
-	public Fork<T, A, R, E> submit(List<Callable<T>> tasks) {
-		return new Fork<T, A, R, E>(executor, mapper, collector, merge(futures, tasks.stream().map(task -> executor.submit(() -> task.call())).collect(Collectors.toList())));
+	public Fork<T, E> submit(List<Callable<T>> tasks) {
+		return new Fork<T, E>(executor, mapper, merge(futures, tasks.stream().map(task -> executor.submit(() -> task.call())).collect(Collectors.toList())));
 	}
 
 	private List<Future<T>> merge(List<Future<T>> list1, List<Future<T>> list2) {
@@ -57,30 +59,26 @@ public class Fork<T, A, R, E extends Throwable> {
 		return list;
 	}
 
-	public Fork<T, A, R, E> submit(Callable<T> task) {
+	public Fork<T, E> submit(Callable<T> task) {
 		return submit(Collections.singletonList(task));
 	}
 
-	public Try<R, E> join() {
+	public <R, A> R collect(Collector<T, A, R> collector, T failureValue) {
+		return futures.stream().map(future -> joinSingle(mapper, future)).map(v -> v.getOrElse(failureValue)).collect(collector);
+	}
+
+	public <R, A> Try<R, E> collectOrFail(Collector<T, A, R> collector) {
 		try {
-			return Try.success(mapper, futures.stream().map(future -> joinSingle(future)).collect(collector));
-		} catch (ForkException e) {
-			return Try.failure(mapper, mapper.apply(e.getCause()));
+			return Try.success(mapper, futures.stream().map(future -> joinSingle(e -> new RuntimeException(e), future)).map(v -> v.getOrThrow()).collect(collector));
+		} catch (RuntimeException e) {
+			return Try.failure(mapper, mapper.apply(e));
 		}
 	}
 
-	private T joinSingle(Future<T> future) {
-		return Try.of(e -> new ForkException(e), () -> future.get()).getOrThrow(null);
+	private <X extends Throwable> Try<T, X> joinSingle(Function<Throwable, X> mapper, Future<T> future) {
+		return Try.of(mapper, () -> future.get());
 	}
-	
-	private static class ForkException extends RuntimeException {
-		private static final long serialVersionUID = 1L;
 
-		public ForkException(Throwable e) {
-			super("Task failed", e);
-		}
-	}
-	
 	public void shutdown() {
 		executor.shutdown();
 	}

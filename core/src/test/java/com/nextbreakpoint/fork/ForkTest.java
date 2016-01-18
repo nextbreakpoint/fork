@@ -9,7 +9,6 @@ import static org.mockito.Mockito.verify;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
@@ -24,62 +23,56 @@ public class ForkTest {
 	public ExpectedException exception = ExpectedException.none();
 
 	@Test
-	public void join_givenCollectorReturnsUnmodificedValue_shouldReturnSuccess() {
-		Try<String, Throwable> result = Fork.of(Collectors.reducing("", (a, t) -> t)).join();
-		assertFalse(result.isFailure());
+	public void join_givenCollectorReturnsUnmodifiedValueAndIdentityIsEmptyString_shouldReturnEmptyString() {
+		String result = Fork.empty(String.class).collect(Collectors.reducing("", (a, t) -> t), "");
+		assertEquals("", result);
 	}
 
 	@Test
-	public void join_givenCollectorReturnsUnmodificedValue_shouldReturnEmptyOptional() {
-		Try<String, Throwable> result = Fork.of(Collectors.reducing("", (a, t) -> t)).join();
-		assertEquals("", result.get());
-	}
-
-	@Test
-	public void join_givenCollectorReturnsUnmodificedValueAndTaskSuppliesString_shouldCallSupply() throws Exception {
+	public void join_givenCollectorReturnsUnmodifiedValueAndTaskSuppliesString_shouldCallSupply() throws Exception {
 		@SuppressWarnings("unchecked")
 		Callable<Object> task = mock(Callable.class);
-		Fork.of(Collectors.reducing((a, t) -> t)).submit(task).join();
+		Fork.empty(Object.class).submit(task).collect(Collectors.reducing("", (a, t) -> t), "");
 		verify(task, times(1)).call();
 	}
 
 	@Test
-	public void join_givenCollectorReturnsUnmodificedValueAndTaskSuppliesString_shouldCallSupplyInNewThread() {
+	public void join_givenCollectorReturnsUnmodifiedValueAndTaskSuppliesString_shouldCallSupplyInNewThread() {
 		final Thread mainThread = Thread.currentThread();
 		Callable<Object> task = () -> {
 			assertTrue(Thread.currentThread() != mainThread);
 			return null;
 		};
-		Fork.of(Collectors.reducing((a, t) -> t)).submit(task).join();
+		Fork.empty(Object.class).submit(task).collect(Collectors.reducing("", (a, t) -> t), "");
 	}
 
 	@Test
-	public void join_givenCollectorReturnsUnmodificedValueAndTaskThrowsException_shouldReturnFailure() {
-		Try<Optional<Object>, Throwable> result = Fork.of(Collectors.reducing((a, t) -> t)).submit(() -> { throw new Exception(); }).join();
+	public void join_givenCollectorReturnsUnmodifiedValueAndTaskThrowsException_shouldReturnFailureValue() {
+		String result = Fork.empty(String.class).submit(() -> { throw new Exception(); }).collect(Collectors.reducing("", (a, t) -> t), "X");
+		assertEquals("X", result);
+	}
+
+	@Test
+	public void join_givenCollectorReturnsUnmodifiedValueAndTaskThrowsException_shouldReturnFailure() {
+		Try<String, Throwable> result = Fork.empty(String.class).submit(() -> { throw new Exception(); }).collectOrFail(Collectors.reducing("", (a, t) -> t));
 		assertTrue(result.isFailure());
 	}
 	
 	@Test
-	public void join_givenCollectorReturnsUnmodificedValueAndTaskReturnsNull_shouldReturnEmptyOptional() {
-		Try<String, Throwable> result = Fork.of(Collectors.reducing("", (a, t) -> t)).submit(() -> null).join();
-		assertFalse(result.value().isPresent());
-	}
-
-	@Test
-	public void join_givenCollectorReturnsUnmodificedValueAndTaskReturnsString_shouldReturnSuccess() {
-		Try<String, Throwable> result = Fork.of(Collectors.reducing("", (a, t) -> t)).submit(() -> "X").join();
+	public void join_givenCollectorReturnsUnmodifiedValueAndTaskReturnsString_shouldReturnSuccess() {
+		Try<String, Throwable> result = Fork.empty(String.class).submit(() -> "X").collectOrFail(Collectors.reducing("", (a, t) -> t));
 		assertFalse(result.isFailure());
 	}
 
 	@Test
-	public void join_givenCollectorReturnsUnmodificedValueAndTaskReturnsString_shouldReturnSameString_whenSubmittingSingleTask() {
-		Try<String, Throwable> result = Fork.of(Collectors.reducing("", (a, t) -> t)).submit(() -> "X").join();
+	public void join_givenCollectorReturnsUnmodifiedValueAndTaskReturnsString_shouldReturnSameString_whenSubmittingSingleTask() {
+		Try<String, Throwable> result = Fork.empty(String.class).submit(() -> "X").collectOrFail(Collectors.reducing("", (a, t) -> t));
 		assertEquals("X", result.value().get());
 	}
 
 	@Test
 	public void join_givenCollectorConcatenatesValuesAndTaskReturnsString_shouldReturnConcatenatedStrings_whenSubmittingMultipleTasks() {
-		Try<String, Throwable> result = Fork.of(Collectors.reducing("", (a, t) -> a + t)).submit(() -> "X").submit(() -> "Y").join();
+		Try<String, Throwable> result = Fork.empty(String.class).submit(() -> "X").submit(() -> "Y").collectOrFail(Collectors.reducing("", (a, t) -> a + t));
 		assertEquals("XY", result.value().get());
 	}
 
@@ -88,7 +81,7 @@ public class ForkTest {
 		List<Callable<String>> tasks = new ArrayList<>();
 		tasks.add(() -> "Y");
 		tasks.add(() -> "X");
-		Try<String, Throwable> result = Fork.of(Collectors.reducing("", (a, t) -> a + t)).submit(tasks).join();
+		Try<String, Throwable> result = Fork.empty(String.class).submit(tasks).collectOrFail(Collectors.reducing("", (a, t) -> a + t));
 		assertEquals("YX", result.value().get());
 	}
 
@@ -100,7 +93,7 @@ public class ForkTest {
 		List<Callable<String>> tasks2 = new ArrayList<>();
 		tasks2.add(() -> "X");
 		tasks2.add(() -> "Y");
-		Try<String, Throwable> result = Fork.of(Collectors.reducing("", (a, t) -> a + t)).submit(tasks1).submit(tasks2).join();
+		Try<String, Throwable> result = Fork.empty(String.class).submit(tasks1).submit(tasks2).collectOrFail(Collectors.reducing("", (a, t) -> a + t));
 		assertEquals("YXXY", result.value().get());
 	}
 }
