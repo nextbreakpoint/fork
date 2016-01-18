@@ -17,7 +17,7 @@ public class ForkMain {
 			.submit(() -> service1.doSomething())
 			.submit(() -> service2.doSomething()) 
 			.submit(() -> service3.doSomething())
-			.collect(concatenate("X"), ""));
+			.collect(concatenate("X"), "E"));
 
 		Fork.of(executor, String.class)
 			.submit(() -> service1.doSomething())
@@ -28,6 +28,7 @@ public class ForkMain {
 		try {
 			Fork.of(executor, String.class)
 				.submit(() -> service1.doSomething())
+				.submit(() -> service2.doSomething())
 				.submit(() -> service3.doSomething())
 				.collectOrFail(concatenate("X"))
 				.ifPresentOrThrow(System.out::println);

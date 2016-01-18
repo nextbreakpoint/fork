@@ -18,7 +18,7 @@ Given the program:
 				.submit(() -> service1.doSomething())
 				.submit(() -> service2.doSomething()) 
 				.submit(() -> service3.doSomething())
-				.collect(concatenate("X"), ""));
+				.collect(concatenate("X"), "E"));
 	
 			Fork.of(executor, String.class)
 				.submit(() -> service1.doSomething())
@@ -29,6 +29,7 @@ Given the program:
 			try {
 				Fork.of(executor, String.class)
 					.submit(() -> service1.doSomething())
+					.submit(() -> service2.doSomething())
 					.submit(() -> service3.doSomething())
 					.collectOrFail(concatenate("X"))
 					.ifPresentOrThrow(System.out::println);
@@ -73,6 +74,6 @@ Given the program:
 
 The output will be:
 
-	XYZ
+	XYZE
 	XYZ
 	java.lang.Exception: Error
