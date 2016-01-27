@@ -4,7 +4,7 @@
 	<parent>
 		<groupId>com.nextbreakpoint</groupId>
 		<artifactId>com.nextbreakpoint.fork</artifactId>
-		<version>1.0</version>
+		<version>1.1</version>
 	</parent>
 	<artifactId>com.nextbreakpoint.fork.repository</artifactId>
 	<packaging>pom</packaging>
@@ -21,7 +21,7 @@
 						<configuration>
 							<target>
 								<get dest="target">
-									<url url="https://github.com/nextbreakpoint/try/releases/download/v1.1/com.nextbreakpoint.try-1.1.jar" />
+									<url url="https://github.com/nextbreakpoint/try/releases/download/v1.2/com.nextbreakpoint.try-1.2.jar" />
 								</get>
 							</target>
 						</configuration>
@@ -45,9 +45,9 @@
 						<configuration>
 							<groupId>com.nextbreakpoint</groupId>
 							<artifactId>com.nextbreakpoint.try</artifactId>
-							<version>1.1</version>
+							<version>1.2</version>
 							<packaging>jar</packaging>
-							<file>target/com.nextbreakpoint.try-1.1.jar</file>
+							<file>target/com.nextbreakpoint.try-1.2.jar</file>
 							<createChecksum>true</createChecksum>
 							<generatePom>true</generatePom>
 						</configuration>
