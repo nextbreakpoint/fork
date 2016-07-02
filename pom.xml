@@ -6,7 +6,7 @@
 	<version>1.2.0</version>
 	<packaging>jar</packaging>
 	<name>Fork</name>
-	<description>Fork implements a fluent API for executing tasks in parallel and collecting results</description>
+	<description>Fork implements a fluent API for executing parallel tasks and retuning results</description>
 	<url>https://github.com/nextbreakpoint/fork</url>
 	<licenses>
 		<license>

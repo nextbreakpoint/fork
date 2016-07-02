@@ -1,5 +1,7 @@
 package com.nextbreakpoint.fork;
 
+import com.nextbreakpoint.Try;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -7,10 +9,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.function.Function;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
-
-import com.nextbreakpoint.Try;
+import java.util.stream.Stream;
 
 /**
  * Fork implements a fluent API for executing tasks in parallel and collecting results.
@@ -33,7 +33,7 @@ public class Fork<T, E extends Throwable> {
 	 * @param executor the executor
 	 * @param mapper the mapper
 	 * @param clazz the class
-	 * @return
+	 * @return new instance
 	 */
 	public static <T, E extends Throwable> Fork<T, E> of(ExecutorService executor, Function<Throwable, E> mapper, Class<T> clazz) {
 		return new Fork<T, E>(executor, mapper, Collections.emptyList());
@@ -45,7 +45,7 @@ public class Fork<T, E extends Throwable> {
 	 * The class is required to specify the type returned by a task.
 	 * @param executor the executor
 	 * @param clazz the class
-	 * @return
+	 * @return new instance
 	 */
 	public static <T> Fork<T, Throwable> of(ExecutorService executor, Class<T> clazz) {
 		return of(executor, defaultMapper(), clazz);
@@ -53,7 +53,7 @@ public class Fork<T, E extends Throwable> {
 
 	/**
 	 * Submit a list of tasks.
-	 * @param tasks the tasks
+	 * @param tasks the list of tasks
 	 * @return new instance
 	 */
 	public Fork<T, E> submit(List<Callable<T>> tasks) {
@@ -61,7 +61,7 @@ public class Fork<T, E extends Throwable> {
 	}
 
 	/**
-	 * Submit a single task.
+	 * Submit a task.
 	 * @param task the task
 	 * @return new instance
 	 */
@@ -70,33 +70,20 @@ public class Fork<T, E extends Throwable> {
 	}
 
 	/**
-	 * Executes all tasks submitted and collects values. 
-	 * Continues to collect values when a task throws an exception. 
-	 * Passes failureValue to collector when task fails.
-	 * Values are collected in same order as tasks are submitted.
-	 * Tasks are executed in parallel according to current executor.
-	 * @param collector the collector
-	 * @param failureValue the value of a failed task
-	 * @return the value of collector
+	 * Returns a stream.
+	 * @return new stream
 	 */
-	public <R, A> R collect(Collector<T, A, R> collector, T failureValue) {
-		return futures.stream().map(future -> join(mapper, future)).map(v -> v.getOrElse(failureValue)).collect(collector);
+	public Stream<Try<T, E>> stream() {
+		return stream(mapper);
 	}
 
 	/**
-	 * Executes all tasks submitted and collects values. 
-	 * Stops collecting values when a task throws an exception. 
-	 * Values are collected in same order as tasks are submitted.
-	 * Tasks are executed in parallel according to current executor.
-	 * @param collector the collector
-	 * @return the value of collector
+	 * Returns a stream.
+	 * @param mapper the exception mapper
+	 * @return new stream
 	 */
-	public <R, A> Try<R, E> collectOrFail(Collector<T, A, R> collector) {
-		try {
-			return Try.success(mapper, futures.stream().map(future -> join(e -> new ForkException(e), future)).map(v -> v.getOrThrow()).collect(collector));
-		} catch (RuntimeException e) {
-			return Try.failure(mapper, mapper.apply(e.getCause()));
-		}
+	public <X extends Throwable> Stream<Try<T, X>> stream(Function<Throwable, X> mapper) {
+		return futures.stream().map(future -> join(mapper, future));
 	}
 
 	private Fork(ExecutorService executor, Function<Throwable, E> mapper, List<Future<T>> futures) {
@@ -118,13 +105,5 @@ public class Fork<T, E extends Throwable> {
 
 	private static Function<Throwable, Throwable> defaultMapper() {
 		return x -> x;
-	}
-	
-	private static class ForkException extends RuntimeException {
-		private static final long serialVersionUID = 1L;
-
-		public ForkException(Throwable cause) {
-			super(cause);
-		}
 	}
 }

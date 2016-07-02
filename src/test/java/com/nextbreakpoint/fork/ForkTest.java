@@ -1,26 +1,23 @@
 package com.nextbreakpoint.fork;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.stream.Collectors;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import com.nextbreakpoint.Try;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.function.Function;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
+
+import static org.junit.Assert.*;
 
 public class ForkTest {
 	@Rule
@@ -37,79 +34,97 @@ public class ForkTest {
 	public void cleanup() {
 		executor.shutdown();
 	}
-	
-	@Test
-	public void collect_givenCollectorReturnsUnmodifiedValueAndIdentityIsEmptyString_shouldReturnEmptyString() {
-		String result = Fork.of(executor, String.class).collect(Collectors.reducing("", (a, t) -> t), "");
-		assertEquals("", result);
-	}
 
 	@Test
-	public void collect_givenCollectorReturnsUnmodifiedValueAndTaskSuppliesString_shouldCallSupply() throws Exception {
-		@SuppressWarnings("unchecked")
-		Callable<String> task = mock(Callable.class);
-		Fork.of(executor, String.class).submit(task).collect(Collectors.reducing("", (a, t) -> t), "");
-		verify(task, times(1)).call();
-	}
-
-	@Test
-	public void collect_givenCollectorReturnsUnmodifiedValueAndTaskSuppliesString_shouldCallSupplyInNewThread() {
+	public void shouldCallTaskInNewThread() {
 		final Thread mainThread = Thread.currentThread();
 		Callable<String> task = () -> {
 			assertTrue(Thread.currentThread() != mainThread);
 			return null;
 		};
-		Fork.of(executor, String.class).submit(task).collect(Collectors.reducing("", (a, t) -> t), "");
+		fork().submit(task()).stream();
 	}
 
 	@Test
-	public void collect_givenCollectorReturnsUnmodifiedValueAndTaskThrowsException_shouldReturnFailureValue() {
-		String result = Fork.of(executor, String.class).submit(() -> { throw new Exception(); }).collect(Collectors.reducing("", (a, t) -> t), "X");
-		assertEquals("X", result);
+	public void shouldReturnSuccessWhenSingleTaskSubmitted() {
+		assertFalse(fork().submit(task()).stream().findFirst().get().isFailure());
 	}
 
 	@Test
-	public void collectOrFail_givenCollectorReturnsUnmodifiedValueAndTaskThrowsException_shouldReturnFailure() {
-		Try<String, Throwable> result = Fork.of(executor, String.class).submit(() -> { throw new Exception(); }).collectOrFail(Collectors.reducing("", (a, t) -> t));
-		assertTrue(result.isFailure());
-	}
-	
-	@Test
-	public void collectOrFail_givenCollectorReturnsUnmodifiedValueAndTaskReturnsString_shouldReturnSuccess() {
-		Try<String, Throwable> result = Fork.of(executor, String.class).submit(() -> "X").collectOrFail(Collectors.reducing("", (a, t) -> t));
-		assertFalse(result.isFailure());
+	public void shouldReturnFailureWhenSingleTaskSubmittedAndTaskThrowsException() {
+		assertTrue(fork().submit(taskWithException()).stream().findFirst().get().isFailure());
 	}
 
 	@Test
-	public void collectOrFail_givenCollectorReturnsUnmodifiedValueAndTaskReturnsString_shouldReturnSameString_whenSubmittingSingleTask() {
-		Try<String, Throwable> result = Fork.of(executor, String.class).submit(() -> "X").collectOrFail(Collectors.reducing("", (a, t) -> t));
-		assertEquals("X", result.value().get());
+	public void shouldReturnCountOneWhenSingleTaskSubmitted() {
+		assertEquals(1, fork().submit(task()).stream().count());
 	}
 
 	@Test
-	public void collectOrFail_givenCollectorConcatenatesValuesAndTaskReturnsString_shouldReturnConcatenatedStrings_whenSubmittingMultipleTasks() {
-		Try<String, Throwable> result = Fork.of(executor, String.class).submit(() -> "X").submit(() -> "Y").collectOrFail(Collectors.reducing("", (a, t) -> a + t));
-		assertEquals("XY", result.value().get());
+	public void shouldReturnCountTwoWhenSingleListOfTasksSubmitted() {
+		List<Callable<String>> tasks = createList("X", "Y");
+		assertEquals(2, fork().submit(tasks).stream().count());
 	}
 
 	@Test
-	public void collectOrFail_givenCollectorConcatenatesValuesAndTaskReturnsString_shouldReturnConcatenatedStrings_whenSubmittingListOfTasks() {
-		List<Callable<String>> tasks = new ArrayList<>();
-		tasks.add(() -> "Y");
-		tasks.add(() -> "X");
-		Try<String, Throwable> result = Fork.of(executor, String.class).submit(tasks).collectOrFail(Collectors.reducing("", (a, t) -> a + t));
-		assertEquals("YX", result.value().get());
+	public void shouldReturnCountFourWhenMultipleListsOfTasksSubmitted() {
+		List<Callable<String>> tasks1 = createList("X", "Y");
+		List<Callable<String>> tasks2 = createList("Z", "W");
+		assertEquals(4, fork().submit(tasks1).submit(tasks2).stream().count());
 	}
 
 	@Test
-	public void collectOrFail_givenCollectorConcatenatesValuesAndTaskReturnsString_shouldReturnConcatenatedStrings_whenSubmittingMultipleListOfTasks() {
-		List<Callable<String>> tasks1 = new ArrayList<>();
-		tasks1.add(() -> "Y");
-		tasks1.add(() -> "X");
-		List<Callable<String>> tasks2 = new ArrayList<>();
-		tasks2.add(() -> "X");
-		tasks2.add(() -> "Y");
-		Try<String, Throwable> result = Fork.of(executor, String.class).submit(tasks1).submit(tasks2).collectOrFail(Collectors.reducing("", (a, t) -> a + t));
-		assertEquals("YXXY", result.value().get());
+	public void shouldConcatenateStringsWhenSingleListOfTasksSubmitted() {
+		List<Callable<String>> tasks = createList("X", "Y");
+		assertEquals("XY", fork().submit(tasks).stream().map(r -> r.get()).collect(joinCollector()));
+	}
+
+	@Test
+	public void shouldConcatenateStringsWhenMultipleListsOfTasksSubmitted() {
+		List<Callable<String>> tasks1 = createList("X", "Y");
+		List<Callable<String>> tasks2 = createList("Z", "W");
+		assertEquals("XYZW", fork().submit(tasks1).submit(tasks2).stream().map(r -> r.get()).collect(joinCollector()));
+	}
+
+	@Test
+	public void shouldThrowExecutionExceptionWhenTaskThrowsNullPointerException() throws Throwable {
+		exception.expect(ExecutionException.class);
+		exception.expectMessage("<null>");
+		fork().submit(taskWithException()).stream().findFirst().get().throwException();
+	}
+
+	@Test
+	public void shouldThrowIOExceptionWhenTaskThrowsNullPointerException() throws IOException {
+		exception.expect(IOException.class);
+		exception.expectMessage("<test>");
+		fork().submit(taskWithException()).stream(testMapper()).findFirst().get().throwException();
+	}
+
+	private List<Callable<String>> createList(String... values) {
+		ArrayList<Callable<String>> result = new ArrayList<>();
+		for (String value : values) {
+			result.add(() -> value);
+		}
+		return result;
+	}
+
+	private Function<Throwable, IOException> testMapper() {
+		return e -> new IOException("<test>", e);
+	}
+
+	private Callable<String> task() {
+		return () -> "X";
+	}
+
+	private Callable<String> taskWithException() {
+		return () -> { throw new NullPointerException("<null>"); };
+	}
+
+	private Fork<String, Throwable> fork() {
+		return Fork.of(executor, String.class);
+	}
+
+	private Collector<String, ?, String> joinCollector() {
+		return Collectors.reducing("", (a, t) -> a + t);
 	}
 }
