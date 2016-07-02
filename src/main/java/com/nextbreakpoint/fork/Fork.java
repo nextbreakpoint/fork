@@ -13,9 +13,9 @@ import java.util.stream.Collectors;
 import com.nextbreakpoint.Try;
 
 /**
- * Fork implements a functional API for executing parallel tasks in Java 8.
+ * Fork implements a fluent API for executing tasks in parallel and collecting results.
  * 
- * @author Andrea
+ * @author Andrea Medeghini
  *
  * @param <T> the type of returned value
  * @param <E> the type of captured exception

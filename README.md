@@ -1,6 +1,6 @@
-# Fork 1.1
+# Fork 1.2.0
 
-Fork implements a functional API for executing parallel tasks in Java 8
+Fork implements a fluent API for executing tasks in parallel and collecting results
 
 ## Example
 
