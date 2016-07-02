@@ -33,6 +33,8 @@ public class Fork<T, E extends Throwable> {
 	 * @param executor the executor
 	 * @param mapper the mapper
 	 * @param clazz the class
+	 * @param <T> the result type
+	 * @param <E> the exception type
 	 * @return new instance
 	 */
 	public static <T, E extends Throwable> Fork<T, E> of(ExecutorService executor, Function<Throwable, E> mapper, Class<T> clazz) {
@@ -45,6 +47,7 @@ public class Fork<T, E extends Throwable> {
 	 * The class is required to specify the type returned by a task.
 	 * @param executor the executor
 	 * @param clazz the class
+	 * @param <T> the result type
 	 * @return new instance
 	 */
 	public static <T> Fork<T, Throwable> of(ExecutorService executor, Class<T> clazz) {
@@ -80,6 +83,7 @@ public class Fork<T, E extends Throwable> {
 	/**
 	 * Returns a stream.
 	 * @param mapper the exception mapper
+	 * @param <X> the exception type
 	 * @return new stream
 	 */
 	public <X extends Throwable> Stream<Try<T, X>> stream(Function<Throwable, X> mapper) {
