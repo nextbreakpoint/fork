@@ -12,7 +12,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * Fork implements a fluent API for executing tasks in parallel and collecting results.
+ * Fork implements a fluent API for executing parallel tasks and retuning results.
  * 
  * @author Andrea Medeghini
  *
