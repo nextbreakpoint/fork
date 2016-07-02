@@ -5,6 +5,7 @@ import com.nextbreakpoint.Try;
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -44,8 +45,20 @@ public class ForkMain {
 			.submit(() -> service1.doSomething())
 			.submit(() -> service2.doSomething())
 			.submit(() -> service3.doSomething())
-			.stream(exceptionMapper())
+			.withMapper(exceptionMapper())
+			.stream()
 			.forEach(result -> result.onFailure(handleIOException()).ifPresent(System.out::println));
+
+		Fork.of(executor, String.class)
+			.submit(() -> service1.doSomething())
+			.submit(() -> service2.doSomething())
+			.submit(() -> service3.doSomething())
+			.withTimeout(200L, TimeUnit.MILLISECONDS)
+			.stream()
+			.filter(Try::isFailure)
+			.mapToInt(result -> 1)
+			.reduce((x, y) -> x + y)
+			.ifPresent(System.out::println);
 
 		executor.shutdown();
 	}
@@ -83,7 +96,7 @@ public class ForkMain {
 
 		@Override
 		public String doSomething() throws Exception {
-			Thread.sleep((long) (Math.random() * 1000));
+			Thread.sleep((long) (Math.random() * 1000) + 500);
 			return value;
 		}
 	}
@@ -91,7 +104,7 @@ public class ForkMain {
 	private static class ServiceKO implements Service {
 		@Override
 		public String doSomething() throws Exception {
-			Thread.sleep((long) (Math.random() * 1000));
+			Thread.sleep((long) (Math.random() * 1000) + 500);
 			throw new Exception("Error");
 		}
 	}

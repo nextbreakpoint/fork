@@ -42,8 +42,20 @@ Given the program:
                 .submit(() -> service1.doSomething())
                 .submit(() -> service2.doSomething())
                 .submit(() -> service3.doSomething())
-                .stream(exceptionMapper())
+                .withMapper(exceptionMapper())
+                .stream()
                 .forEach(result -> result.onFailure(handleIOException()).ifPresent(System.out::println));
+    
+            Fork.of(executor, String.class)
+                .submit(() -> service1.doSomething())
+                .submit(() -> service2.doSomething())
+                .submit(() -> service3.doSomething())
+                .withTimeout(200L, TimeUnit.MILLISECONDS)
+                .stream()
+                .filter(Try::isFailure)
+                .mapToInt(result -> 1)
+                .reduce((x, y) -> x + y)
+                .ifPresent(System.out::println);
     
             executor.shutdown();
         }
@@ -81,7 +93,7 @@ Given the program:
     
             @Override
             public String doSomething() throws Exception {
-                Thread.sleep((long) (Math.random() * 1000));
+                Thread.sleep((long) (Math.random() * 1000) + 500);
                 return value;
             }
         }
@@ -89,7 +101,7 @@ Given the program:
         private static class ServiceKO implements Service {
             @Override
             public String doSomething() throws Exception {
-                Thread.sleep((long) (Math.random() * 1000));
+                Thread.sleep((long) (Math.random() * 1000) + 500);
                 throw new Exception("Error");
             }
         }
@@ -106,3 +118,4 @@ The output will be:
     A
     B
     IO Error
+    3

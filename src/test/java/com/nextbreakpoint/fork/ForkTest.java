@@ -9,10 +9,7 @@ import org.junit.rules.ExpectedException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 import java.util.function.Function;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
@@ -42,12 +39,12 @@ public class ForkTest {
 			assertTrue(Thread.currentThread() != mainThread);
 			return null;
 		};
-		fork().submit(task()).stream();
+		fork().submit(taskWithDelay()).stream();
 	}
 
 	@Test
 	public void shouldReturnSuccessWhenSingleTaskSubmitted() {
-		assertFalse(fork().submit(task()).stream().findFirst().get().isFailure());
+		assertFalse(fork().submit(taskWithDelay()).stream().findFirst().get().isFailure());
 	}
 
 	@Test
@@ -57,7 +54,7 @@ public class ForkTest {
 
 	@Test
 	public void shouldReturnCountOneWhenSingleTaskSubmitted() {
-		assertEquals(1, fork().submit(task()).stream().count());
+		assertEquals(1, fork().submit(taskWithDelay()).stream().count());
 	}
 
 	@Test
@@ -97,7 +94,17 @@ public class ForkTest {
 	public void shouldThrowIOExceptionWhenTaskThrowsNullPointerException() throws IOException {
 		exception.expect(IOException.class);
 		exception.expectMessage("<test>");
-		fork().submit(taskWithException()).stream(testMapper()).findFirst().get().throwException();
+		fork().withMapper(testMapper()).submit(taskWithException()).stream().findFirst().get().throwException();
+	}
+
+	@Test
+	public void shouldReturnSuccessWhenNoTimeoutHappens() {
+		assertFalse(fork().withTimeout(2L, TimeUnit.SECONDS).submit(taskWithDelay(1L, TimeUnit.SECONDS)).stream().findFirst().get().isFailure());
+	}
+
+	@Test
+	public void shouldReturnFailureWhenTimeoutHappens() {
+		assertTrue(fork().withTimeout(1L, TimeUnit.SECONDS).submit(taskWithDelay(2L, TimeUnit.SECONDS)).stream().findFirst().get().isFailure());
 	}
 
 	private List<Callable<String>> createList(String... values) {
@@ -112,8 +119,12 @@ public class ForkTest {
 		return e -> new IOException("<test>", e);
 	}
 
-	private Callable<String> task() {
+	private Callable<String> taskWithDelay() {
 		return () -> "X";
+	}
+
+	private Callable<String> taskWithDelay(Long timeout, TimeUnit unit) {
+		return () -> { Thread.sleep(unit.toMillis(timeout)); return "X"; };
 	}
 
 	private Callable<String> taskWithException() {
