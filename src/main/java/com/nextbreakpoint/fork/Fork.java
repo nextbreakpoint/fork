@@ -104,9 +104,8 @@ public class Fork<T, E extends Throwable> {
 		return list;
 	}
 
-	//TODO replace Try.of(mapper, () -> result.get()) with proper conversion
 	private <X extends Throwable> List<Try<Future<T>, X>> mapFutures(Function<Throwable, X> mapper) {
-		return futures.stream().map(result -> Try.of(mapper, () -> result.get())).collect(Collectors.toList());
+		return futures.stream().map(result -> result.convert(mapper)).collect(Collectors.toList());
 	}
 
 	private static Function<Throwable, Throwable> defaultMapper() {
