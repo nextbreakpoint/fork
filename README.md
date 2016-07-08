@@ -1,6 +1,6 @@
 # Fork 1.2.0
 
-Fork implements a fluent API for executing parallel tasks and retuning results
+Fork implements a fluent API for executing parallel tasks and collecting results
 
 ## Example
 
