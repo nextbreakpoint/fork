@@ -38,7 +38,7 @@ public class ForkMain {
 			.submit(() -> service3.doSomething())
 			.stream()
 			.peek(result -> result.ifFailure(handleException()))
-			.map(result -> result.isFailure() ? "Failure" : "Success")
+			.map(result -> result.map(s -> "Success").getOrElse("Failure"))
 			.forEach(System.out::println);
 
 		Fork.of(executor, String.class)
