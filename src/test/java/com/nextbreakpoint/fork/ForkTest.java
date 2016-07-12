@@ -115,7 +115,7 @@ public class ForkTest {
 		return result;
 	}
 
-	private Function<Throwable, IOException> testMapper() {
+	private Function<Exception, IOException> testMapper() {
 		return e -> new IOException("<test>", e);
 	}
 
@@ -131,7 +131,7 @@ public class ForkTest {
 		return () -> { throw new NullPointerException("<null>"); };
 	}
 
-	private Fork<String, Throwable> fork() {
+	private Fork<String, Exception> fork() {
 		return Fork.of(executor, String.class);
 	}
 

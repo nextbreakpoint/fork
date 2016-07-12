@@ -1,4 +1,4 @@
-# Fork 1.2.0
+# Fork 1.3.0
 
 Fork implements a fluent API for executing parallel tasks and collecting results
 
@@ -44,7 +44,7 @@ Given the program:
                 .submit(() -> service3.doSomething())
                 .withMapper(exceptionMapper())
                 .stream()
-                .forEach(result -> result.onFailure(handleIOException()).ifPresent(System.out::println));
+                .forEach(result -> result.inFailure(handleIOException());
     
             Fork.of(executor, String.class)
                 .submit(() -> service1.doSomething())
@@ -64,7 +64,7 @@ Given the program:
         private static final ServiceOK service2 = new ServiceOK("B");
         private static final ServiceKO service3 = new ServiceKO();
     
-        private static Consumer<Throwable> handleException() {
+        private static Consumer<Exception> handleException() {
             return e -> System.out.println(e.getMessage());
         }
     
@@ -76,7 +76,7 @@ Given the program:
             return Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
         }
     
-        private static Function<Throwable, IOException> exceptionMapper() {
+        private static Function<Exception, IOException> exceptionMapper() {
             return e -> new IOException("IO Error", e);
         }
     
