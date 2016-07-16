@@ -12,22 +12,22 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * Fork implements a fluent API for executing parallel tasks and collecting results.
+ * Fork implements a fluent interface for executing parallel tasks and collecting results.
  * 
  * @author Andrea Medeghini
  *
  * @param <T> the type of returned value
  * @param <E> the type of captured exception
  */
-public class Fork<T, E extends Throwable> {
-	private final Function<Throwable, E> mapper;
+public class Fork<T, E extends Exception> {
+	private final Function<Exception, E> mapper;
 	private final ExecutorService executor;
 	private final List<Try<Future<T>, E>> futures;
 	private final Long timeout;
 	private final TimeUnit unit;
 
 	/**
-	 * Creates new instance with given executor and class. 
+	 * Creates a new instance with given executor and class.
 	 * The executor service will be used to execute the submitted tasks. 
 	 * The class is required to specify the type returned by a task.
 	 * @param executor the executor
@@ -35,7 +35,7 @@ public class Fork<T, E extends Throwable> {
 	 * @param <T> the result type
 	 * @return new instance
 	 */
-	public static <T> Fork<T, Throwable> of(ExecutorService executor, Class<T> clazz) {
+	public static <T> Fork<T, Exception> of(ExecutorService executor, Class<T> clazz) {
 		return new Fork(executor, defaultMapper(), Collections.emptyList(), null, TimeUnit.SECONDS);
 	}
 
@@ -63,7 +63,7 @@ public class Fork<T, E extends Throwable> {
 	 * @param unit the unit
 	 * @return new instance
 	 */
-	public Fork<T, E> withTimeout(Long timeout, TimeUnit unit) {
+	public Fork<T, E> timeout(Long timeout, TimeUnit unit) {
 		return new Fork<T, E>(executor, mapper, futures, timeout, unit);
 	}
 
@@ -73,7 +73,7 @@ public class Fork<T, E extends Throwable> {
 	 * @param <X> the exception type
 	 * @return new instance
 	 */
-	public <X extends Throwable> Fork<T, X> withMapper(Function<Throwable, X> mapper) {
+	public <X extends Exception> Fork<T, X> mapper(Function<Exception, X> mapper) {
 		return new Fork<T, X>(executor, mapper, mapFutures(mapper), timeout, unit);
 	}
 
@@ -82,19 +82,15 @@ public class Fork<T, E extends Throwable> {
 	 * @return new stream
 	 */
 	public Stream<Try<T, E>> stream() {
-		return stream(mapper);
+		return futures.stream().map(result -> result.flatMap(future -> awaitFuture(future)));
+	}
+
+	private Try<T, E> awaitFuture(Future<T> future) {
+		return Try.of(Optional.ofNullable(timeout).map(timeout -> (Callable<T>)() -> future.get(timeout, unit)).orElseGet(() -> () -> future.get())).mapper(mapper);
 	}
 
 	private List<Try<Future<T>, E>> submitAll(Collection<Callable<T>> tasks) {
-		return tasks.stream().map(task -> Try.of(mapper, () -> executor.submit(task))).collect(Collectors.toList());
-	}
-
-	private <X extends Throwable> Stream<Try<T, X>> stream(Function<Throwable, X> mapper) {
-		return futures.stream().map(result -> result.map(future -> awaitFuture(mapper, future)).getOrElse(null));
-	}
-
-	private <X extends Throwable> Try<T, X> awaitFuture(Function<Throwable, X> mapper, Future<T> future) {
-		return Try.of(mapper, Optional.ofNullable(timeout).map(timeout -> (Callable<T>)() -> future.get(timeout, unit)).orElseGet(() -> () -> future.get()));
+		return tasks.stream().map(task -> Try.of(() -> executor.submit(task)).mapper(mapper)).collect(Collectors.toList());
 	}
 
 	private List<Try<Future<T>, E>> merge(List<Try<Future<T>, E>> list1, List<Try<Future<T>, E>> list2) {
@@ -104,23 +100,19 @@ public class Fork<T, E extends Throwable> {
 		return list;
 	}
 
-	private <X extends Throwable> List<Try<Future<T>, X>> mapFutures(Function<Throwable, X> mapper) {
-		return futures.stream().map(result -> result.convert(mapper)).collect(Collectors.toList());
+	private <X extends Exception> List<Try<Future<T>, X>> mapFutures(Function<Exception, X> mapper) {
+		return futures.stream().map(result -> result.mapper(mapper)).collect(Collectors.toList());
 	}
 
 	private static Function<Throwable, Throwable> defaultMapper() {
 		return x -> x;
 	}
 
-	private Fork(ExecutorService executor, Function<Throwable, E> mapper, List<Try<Future<T>, E>> futures, Long timeout, TimeUnit unit) {
-		Objects.requireNonNull(executor);
-		Objects.requireNonNull(futures);
-		Objects.requireNonNull(mapper);
-		Objects.requireNonNull(unit);
-		this.executor = executor;
-		this.futures = futures;
-		this.mapper = mapper;
+	private Fork(ExecutorService executor, Function<Exception, E> mapper, List<Try<Future<T>, E>> futures, Long timeout, TimeUnit unit) {
+		this.executor = Objects.requireNonNull(executor);
+		this.futures = Objects.requireNonNull(futures);
+		this.mapper = Objects.requireNonNull(mapper);
+		this.unit = Objects.requireNonNull(unit);
 		this.timeout = timeout;
-		this.unit = unit;
 	}
 }
