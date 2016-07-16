@@ -2,6 +2,20 @@
 
 Fork implements a fluent interface for executing parallel tasks and collecting results.
 
+## Getting binaries
+
+Fork is available in Maven Central Repository, Bintray and GitHub. 
+
+If you are using Maven, add a dependency in your POM:
+
+    <dependency>
+        <groupId>com.nextbreakpoint</groupId>
+        <artifactId>com.nextbreakpoint.fork</artifactId>
+        <version>1.3.0</version>
+    </dependency>
+
+If you are using other tools, check in the documentation how to install an artifact.
+  
 ## Complete example
 
 Given the program:
