@@ -27,16 +27,24 @@ public class Fork<T, E extends Exception> {
 	private final TimeUnit unit;
 
 	/**
-	 * Creates a new instance with given executor and class.
+	 * Creates a new instance of given executor.
 	 * The executor service will be used to execute the submitted tasks. 
-	 * The class is required to specify the type returned by a task.
 	 * @param executor the executor
+	 * @param <T> the result type
+	 * @return new instance
+	 */
+	public static <T> Fork<T, Exception> with(ExecutorService executor) {
+		return new Fork(executor, defaultMapper(), Collections.emptyList(), null, TimeUnit.SECONDS);
+	}
+
+	/**
+	 * Creates a new instance of given result type.
 	 * @param clazz the class
 	 * @param <T> the result type
 	 * @return new instance
 	 */
-	public static <T> Fork<T, Exception> of(ExecutorService executor, Class<T> clazz) {
-		return new Fork(executor, defaultMapper(), Collections.emptyList(), null, TimeUnit.SECONDS);
+	public <T> Fork<T, Exception> type(Class<T> clazz) {
+		return new Fork(executor, mapper, futures, timeout, unit);
 	}
 
 	/**
@@ -50,6 +58,15 @@ public class Fork<T, E extends Exception> {
 
 	/**
 	 * Submit a list of tasks.
+	 * @param tasks the list of task
+	 * @return new instance
+	 */
+	public Fork<T, E> submit(Callable<T>... tasks) {
+		return submit(Arrays.asList(tasks));
+	}
+
+	/**
+	 * Submit a list of tasks.
 	 * @param tasks the list of tasks
 	 * @return new instance
 	 */
@@ -58,7 +75,7 @@ public class Fork<T, E extends Exception> {
 	}
 
 	/**
-	 * Creates a new instance with given timeout.
+	 * Creates a new instance of given timeout.
 	 * @param timeout the timeout
 	 * @param unit the unit
 	 * @return new instance
@@ -68,7 +85,7 @@ public class Fork<T, E extends Exception> {
 	}
 
 	/**
-	 * Creates a new instance with given mapper.
+	 * Creates a new instance of given mapper.
 	 * @param mapper the mapper
 	 * @param <X> the exception type
 	 * @return new instance
@@ -78,10 +95,11 @@ public class Fork<T, E extends Exception> {
 	}
 
 	/**
-	 * Returns a stream.
+	 * Returns a stream with joined results.
+	 * Results are returned in order as submitted tasks.
 	 * @return new stream
 	 */
-	public Stream<Try<T, E>> stream() {
+	public Stream<Try<T, E>> join() {
 		return futures.stream().map(result -> result.flatMap(future -> awaitFuture(future)));
 	}
 
