@@ -39,72 +39,72 @@ public class ForkTest {
 			assertTrue(Thread.currentThread() != mainThread);
 			return null;
 		};
-		fork().submit(taskWithDelay()).stream();
+		fork().submit(taskWithDelay()).join();
 	}
 
 	@Test
 	public void shouldReturnSuccessWhenSingleTaskSubmitted() {
-		assertFalse(fork().submit(taskWithDelay()).stream().findFirst().get().isFailure());
+		assertFalse(fork().submit(taskWithDelay()).join().findFirst().get().isFailure());
 	}
 
 	@Test
 	public void shouldReturnFailureWhenSingleTaskSubmittedAndTaskThrowsException() {
-		assertTrue(fork().submit(taskWithException()).stream().findFirst().get().isFailure());
+		assertTrue(fork().submit(taskWithException()).join().findFirst().get().isFailure());
 	}
 
 	@Test
 	public void shouldReturnCountOneWhenSingleTaskSubmitted() {
-		assertEquals(1, fork().submit(taskWithDelay()).stream().count());
+		assertEquals(1, fork().submit(taskWithDelay()).join().count());
 	}
 
 	@Test
 	public void shouldReturnCountTwoWhenSingleListOfTasksSubmitted() {
 		List<Callable<String>> tasks = createList("X", "Y");
-		assertEquals(2, fork().submit(tasks).stream().count());
+		assertEquals(2, fork().submit(tasks).join().count());
 	}
 
 	@Test
 	public void shouldReturnCountFourWhenMultipleListsOfTasksSubmitted() {
 		List<Callable<String>> tasks1 = createList("X", "Y");
 		List<Callable<String>> tasks2 = createList("Z", "W");
-		assertEquals(4, fork().submit(tasks1).submit(tasks2).stream().count());
+		assertEquals(4, fork().submit(tasks1).submit(tasks2).join().count());
 	}
 
 	@Test
 	public void shouldConcatenateStringsWhenSingleListOfTasksSubmitted() {
 		List<Callable<String>> tasks = createList("X", "Y");
-		assertEquals("XY", fork().submit(tasks).stream().map(r -> r.get()).collect(joinCollector()));
+		assertEquals("XY", fork().submit(tasks).join().map(r -> r.get()).collect(joinCollector()));
 	}
 
 	@Test
 	public void shouldConcatenateStringsWhenMultipleListsOfTasksSubmitted() {
 		List<Callable<String>> tasks1 = createList("X", "Y");
 		List<Callable<String>> tasks2 = createList("Z", "W");
-		assertEquals("XYZW", fork().submit(tasks1).submit(tasks2).stream().map(r -> r.get()).collect(joinCollector()));
+		assertEquals("XYZW", fork().submit(tasks1).submit(tasks2).join().map(r -> r.get()).collect(joinCollector()));
 	}
 
 	@Test
 	public void shouldThrowExecutionExceptionWhenTaskThrowsNullPointerException() throws Throwable {
 		exception.expect(ExecutionException.class);
 		exception.expectMessage("<null>");
-		fork().submit(taskWithException()).stream().findFirst().get().throwIfFailure();
+		fork().submit(taskWithException()).join().findFirst().get().throwIfFailure();
 	}
 
 	@Test
 	public void shouldThrowIOExceptionWhenTaskThrowsNullPointerException() throws IOException {
 		exception.expect(IOException.class);
 		exception.expectMessage("<test>");
-		fork().mapper(testMapper()).submit(taskWithException()).stream().findFirst().get().throwIfFailure();
+		fork().mapper(testMapper()).submit(taskWithException()).join().findFirst().get().throwIfFailure();
 	}
 
 	@Test
 	public void shouldReturnSuccessWhenNoTimeoutHappens() {
-		assertFalse(fork().timeout(2L, TimeUnit.SECONDS).submit(taskWithDelay(1L, TimeUnit.SECONDS)).stream().findFirst().get().isFailure());
+		assertFalse(fork().timeout(2L, TimeUnit.SECONDS).submit(taskWithDelay(1L, TimeUnit.SECONDS)).join().findFirst().get().isFailure());
 	}
 
 	@Test
 	public void shouldReturnFailureWhenTimeoutHappens() {
-		assertTrue(fork().timeout(1L, TimeUnit.SECONDS).submit(taskWithDelay(2L, TimeUnit.SECONDS)).stream().findFirst().get().isFailure());
+		assertTrue(fork().timeout(1L, TimeUnit.SECONDS).submit(taskWithDelay(2L, TimeUnit.SECONDS)).join().findFirst().get().isFailure());
 	}
 
 	private List<Callable<String>> createList(String... values) {
@@ -132,7 +132,7 @@ public class ForkTest {
 	}
 
 	private Fork<String, Exception> fork() {
-		return Fork.of(executor, String.class);
+		return Fork.with(executor).type(String.class);
 	}
 
 	private Collector<String, ?, String> joinCollector() {

@@ -13,58 +13,56 @@ public class ForkMain {
 	public static void main(String[] args) {
 		ExecutorService executor = threadPoolExecutor();
 
-		Fork.of(executor, String.class)
+		Fork.with(executor).type(String.class)
 			.submit(() -> doSomething("A"))
 			.submit(() -> doSomething("B"))
 			.submit(() -> alwaysFail())
-			.stream()
+			.join()
 			.filter(Try::isPresent)
 			.map(Try::get)
 			.reduce((a, t) -> a + t)
 			.ifPresent(System.out::println);
 
-		Fork.of(executor, String.class)
+		Fork.with(executor).type(String.class)
 			.submit(() -> doSomething("A"))
 			.submit(() -> doSomething("B"))
 			.submit(() -> alwaysFail())
-			.stream()
+			.join()
 			.map(result -> result.orElse("E"))
 			.reduce((a, t) -> a + t)
 			.ifPresent(System.out::println);
 
-		Fork.of(executor, String.class)
+		Fork.with(executor).type(String.class)
 			.submit(() -> doSomething("A"))
 			.submit(() -> doSomething("B"))
 			.submit(() -> alwaysFail())
-			.stream()
+			.join()
 			.peek(result -> result.ifFailure(handleException()))
 			.map(result -> result.map(s -> "Success").orElse("Failure"))
 			.forEach(System.out::println);
 
-		Fork.of(executor, String.class)
+		Fork.with(executor).type(String.class)
 			.submit(() -> doSomething("A"))
 			.submit(() -> doSomething("B"))
 			.submit(() -> alwaysFail())
 			.mapper(exceptionMapper())
-			.stream()
+			.join()
 			.forEach(result -> result.ifFailure(handleIOException()));
 
-		Fork.of(executor, String.class)
+		Fork.with(executor).type(String.class)
 			.submit(() -> doSomething("A"))
 			.submit(() -> doSomething("B"))
 			.submit(() -> alwaysFail())
-			.stream()
+			.join()
 			.filter(Try::isPresent)
 			.map(result -> result.get())
 			.filter(value -> "A".equals(value))
 			.forEach(System.out::println);
 
-		Fork.of(executor, String.class)
-			.submit(() -> doSomething("A"))
-			.submit(() -> doSomething("B"))
-			.submit(() -> alwaysFail())
+		Fork.with(executor).type(String.class)
+			.submit(() -> doSomething("A"), () -> doSomething("B"), () -> alwaysFail())
 			.timeout(200L, TimeUnit.MILLISECONDS)
-			.stream()
+			.join()
 			.filter(Try::isFailure)
 			.mapToInt(result -> 1)
 			.reduce((x, y) -> x + y)
