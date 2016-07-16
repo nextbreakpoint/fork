@@ -54,7 +54,7 @@ public class Fork<T, E extends Exception> {
 	 * @return new instance
 	 */
 	public Fork<T, E> submit(Collection<Callable<T>> tasks) {
-		return new Fork<T, E>(executor, mapper, merge(futures, submitAll(tasks)), timeout, unit);
+		return new Fork<T, E>(executor, mapper, mergeFutures(futures, submitAll(tasks)), timeout, unit);
 	}
 
 	/**
@@ -86,14 +86,18 @@ public class Fork<T, E extends Exception> {
 	}
 
 	private Try<T, E> awaitFuture(Future<T> future) {
-		return Try.of(Optional.ofNullable(timeout).map(timeout -> (Callable<T>)() -> future.get(timeout, unit)).orElseGet(() -> () -> future.get())).mapper(mapper);
+		return Try.of(callFuture(future)).mapper(mapper).execute();
+	}
+
+	private Callable<T> callFuture(Future<T> future) {
+		return Optional.ofNullable(timeout).map(timeout -> (Callable<T>)() -> future.get(timeout, unit)).orElseGet(() -> () -> future.get());
 	}
 
 	private List<Try<Future<T>, E>> submitAll(Collection<Callable<T>> tasks) {
-		return tasks.stream().map(task -> Try.of(() -> executor.submit(task)).mapper(mapper)).collect(Collectors.toList());
+		return tasks.stream().map(task -> Try.of(() -> executor.submit(task)).mapper(mapper).execute()).collect(Collectors.toList());
 	}
 
-	private List<Try<Future<T>, E>> merge(List<Try<Future<T>, E>> list1, List<Try<Future<T>, E>> list2) {
+	private List<Try<Future<T>, E>> mergeFutures(List<Try<Future<T>, E>> list1, List<Try<Future<T>, E>> list2) {
 		ArrayList<Try<Future<T>, E>> list = new ArrayList<>();
 		list.addAll(list1);
 		list.addAll(list2);
