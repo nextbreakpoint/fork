@@ -87,24 +87,24 @@ public class ForkTest {
 	public void shouldThrowExecutionExceptionWhenTaskThrowsNullPointerException() throws Throwable {
 		exception.expect(ExecutionException.class);
 		exception.expectMessage("<null>");
-		fork().submit(taskWithException()).stream().findFirst().get().throwException();
+		fork().submit(taskWithException()).stream().findFirst().get().throwIfFailure();
 	}
 
 	@Test
 	public void shouldThrowIOExceptionWhenTaskThrowsNullPointerException() throws IOException {
 		exception.expect(IOException.class);
 		exception.expectMessage("<test>");
-		fork().withMapper(testMapper()).submit(taskWithException()).stream().findFirst().get().throwException();
+		fork().mapper(testMapper()).submit(taskWithException()).stream().findFirst().get().throwIfFailure();
 	}
 
 	@Test
 	public void shouldReturnSuccessWhenNoTimeoutHappens() {
-		assertFalse(fork().withTimeout(2L, TimeUnit.SECONDS).submit(taskWithDelay(1L, TimeUnit.SECONDS)).stream().findFirst().get().isFailure());
+		assertFalse(fork().timeout(2L, TimeUnit.SECONDS).submit(taskWithDelay(1L, TimeUnit.SECONDS)).stream().findFirst().get().isFailure());
 	}
 
 	@Test
 	public void shouldReturnFailureWhenTimeoutHappens() {
-		assertTrue(fork().withTimeout(1L, TimeUnit.SECONDS).submit(taskWithDelay(2L, TimeUnit.SECONDS)).stream().findFirst().get().isFailure());
+		assertTrue(fork().timeout(1L, TimeUnit.SECONDS).submit(taskWithDelay(2L, TimeUnit.SECONDS)).stream().findFirst().get().isFailure());
 	}
 
 	private List<Callable<String>> createList(String... values) {

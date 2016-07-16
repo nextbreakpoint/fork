@@ -14,9 +14,9 @@ public class ForkMain {
 		ExecutorService executor = threadPoolExecutor();
 
 		Fork.of(executor, String.class)
-			.submit(() -> service1.doSomething())
-			.submit(() -> service2.doSomething())
-			.submit(() -> service3.doSomething())
+			.submit(() -> doSomething("A"))
+			.submit(() -> doSomething("B"))
+			.submit(() -> alwaysFail())
 			.stream()
 			.filter(Try::isPresent)
 			.map(Try::get)
@@ -24,36 +24,46 @@ public class ForkMain {
 			.ifPresent(System.out::println);
 
 		Fork.of(executor, String.class)
-			.submit(() -> service1.doSomething())
-			.submit(() -> service2.doSomething()) 
-			.submit(() -> service3.doSomething())
+			.submit(() -> doSomething("A"))
+			.submit(() -> doSomething("B"))
+			.submit(() -> alwaysFail())
 			.stream()
-			.map(result -> result.getOrElse("E"))
+			.map(result -> result.orElse("E"))
 			.reduce((a, t) -> a + t)
 			.ifPresent(System.out::println);
 
 		Fork.of(executor, String.class)
-			.submit(() -> service1.doSomething())
-			.submit(() -> service2.doSomething())
-			.submit(() -> service3.doSomething())
+			.submit(() -> doSomething("A"))
+			.submit(() -> doSomething("B"))
+			.submit(() -> alwaysFail())
 			.stream()
 			.peek(result -> result.ifFailure(handleException()))
-			.map(result -> result.map(s -> "Success").getOrElse("Failure"))
+			.map(result -> result.map(s -> "Success").orElse("Failure"))
 			.forEach(System.out::println);
 
 		Fork.of(executor, String.class)
-			.submit(() -> service1.doSomething())
-			.submit(() -> service2.doSomething())
-			.submit(() -> service3.doSomething())
-			.withMapper(exceptionMapper())
+			.submit(() -> doSomething("A"))
+			.submit(() -> doSomething("B"))
+			.submit(() -> alwaysFail())
+			.mapper(exceptionMapper())
 			.stream()
 			.forEach(result -> result.ifFailure(handleIOException()));
 
 		Fork.of(executor, String.class)
-			.submit(() -> service1.doSomething())
-			.submit(() -> service2.doSomething())
-			.submit(() -> service3.doSomething())
-			.withTimeout(200L, TimeUnit.MILLISECONDS)
+			.submit(() -> doSomething("A"))
+			.submit(() -> doSomething("B"))
+			.submit(() -> alwaysFail())
+			.stream()
+			.filter(Try::isPresent)
+			.map(result -> result.get())
+			.filter(value -> "A".equals(value))
+			.forEach(System.out::println);
+
+		Fork.of(executor, String.class)
+			.submit(() -> doSomething("A"))
+			.submit(() -> doSomething("B"))
+			.submit(() -> alwaysFail())
+			.timeout(200L, TimeUnit.MILLISECONDS)
 			.stream()
 			.filter(Try::isFailure)
 			.mapToInt(result -> 1)
@@ -63,9 +73,23 @@ public class ForkMain {
 		executor.shutdown();
 	}
 
-	private static final ServiceOK service1 = new ServiceOK("A");
-	private static final ServiceOK service2 = new ServiceOK("B");
-	private static final ServiceKO service3 = new ServiceKO();
+	public static String doSomething(String value) throws Exception {
+		sleep();
+		return value;
+	}
+
+	public static String alwaysFail() throws Exception {
+		sleep();
+		throw new Exception("Error");
+	}
+
+	private static void sleep() throws InterruptedException {
+		Thread.sleep((long) (Math.random() * 1000) + 500);
+	}
+
+	private static Function<Exception, IOException> exceptionMapper() {
+		return e -> new IOException("IO Error", e);
+	}
 
 	private static Consumer<Exception> handleException() {
 		return e -> System.out.println(e.getMessage());
@@ -77,35 +101,5 @@ public class ForkMain {
 
 	private static ExecutorService threadPoolExecutor() {
 		return Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-	}
-
-	private static Function<Exception, IOException> exceptionMapper() {
-		return e -> new IOException("IO Error", e);
-	}
-
-	private interface Service {
-		String doSomething() throws Exception;
-	}
-	
-	private static class ServiceOK implements Service {
-		private String value;
-
-		public ServiceOK(String value) {
-			this.value = value;
-		}
-
-		@Override
-		public String doSomething() throws Exception {
-			Thread.sleep((long) (Math.random() * 1000) + 500);
-			return value;
-		}
-	}
-	
-	private static class ServiceKO implements Service {
-		@Override
-		public String doSomething() throws Exception {
-			Thread.sleep((long) (Math.random() * 1000) + 500);
-			throw new Exception("Error");
-		}
 	}
 }

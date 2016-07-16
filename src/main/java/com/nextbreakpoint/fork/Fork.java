@@ -12,7 +12,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * Fork implements a fluent API for executing parallel tasks and collecting results.
+ * Fork implements a fluent interface for executing parallel tasks and collecting results.
  * 
  * @author Andrea Medeghini
  *
@@ -27,7 +27,7 @@ public class Fork<T, E extends Exception> {
 	private final TimeUnit unit;
 
 	/**
-	 * Creates new instance with given executor and class. 
+	 * Creates a new instance with given executor and class.
 	 * The executor service will be used to execute the submitted tasks. 
 	 * The class is required to specify the type returned by a task.
 	 * @param executor the executor
@@ -63,7 +63,7 @@ public class Fork<T, E extends Exception> {
 	 * @param unit the unit
 	 * @return new instance
 	 */
-	public Fork<T, E> withTimeout(Long timeout, TimeUnit unit) {
+	public Fork<T, E> timeout(Long timeout, TimeUnit unit) {
 		return new Fork<T, E>(executor, mapper, futures, timeout, unit);
 	}
 
@@ -73,7 +73,7 @@ public class Fork<T, E extends Exception> {
 	 * @param <X> the exception type
 	 * @return new instance
 	 */
-	public <X extends Exception> Fork<T, X> withMapper(Function<Exception, X> mapper) {
+	public <X extends Exception> Fork<T, X> mapper(Function<Exception, X> mapper) {
 		return new Fork<T, X>(executor, mapper, mapFutures(mapper), timeout, unit);
 	}
 
@@ -82,19 +82,15 @@ public class Fork<T, E extends Exception> {
 	 * @return new stream
 	 */
 	public Stream<Try<T, E>> stream() {
-		return stream(mapper);
+		return futures.stream().map(result -> result.flatMap(future -> awaitFuture(future)));
+	}
+
+	private Try<T, E> awaitFuture(Future<T> future) {
+		return Try.of(Optional.ofNullable(timeout).map(timeout -> (Callable<T>)() -> future.get(timeout, unit)).orElseGet(() -> () -> future.get())).mapper(mapper);
 	}
 
 	private List<Try<Future<T>, E>> submitAll(Collection<Callable<T>> tasks) {
 		return tasks.stream().map(task -> Try.of(() -> executor.submit(task)).mapper(mapper)).collect(Collectors.toList());
-	}
-
-	private <X extends Exception> Stream<Try<T, X>> stream(Function<Exception, X> mapper) {
-		return futures.stream().map(result -> result.map(future -> awaitFuture(mapper, future)).getOrElse(null));
-	}
-
-	private <X extends Exception> Try<T, X> awaitFuture(Function<Exception, X> mapper, Future<T> future) {
-		return Try.of(Optional.ofNullable(timeout).map(timeout -> (Callable<T>)() -> future.get(timeout, unit)).orElseGet(() -> () -> future.get())).mapper(mapper);
 	}
 
 	private List<Try<Future<T>, E>> merge(List<Try<Future<T>, E>> list1, List<Try<Future<T>, E>> list2) {
@@ -113,14 +109,10 @@ public class Fork<T, E extends Exception> {
 	}
 
 	private Fork(ExecutorService executor, Function<Exception, E> mapper, List<Try<Future<T>, E>> futures, Long timeout, TimeUnit unit) {
-		Objects.requireNonNull(executor);
-		Objects.requireNonNull(futures);
-		Objects.requireNonNull(mapper);
-		Objects.requireNonNull(unit);
-		this.executor = executor;
-		this.futures = futures;
-		this.mapper = mapper;
+		this.executor = Objects.requireNonNull(executor);
+		this.futures = Objects.requireNonNull(futures);
+		this.mapper = Objects.requireNonNull(mapper);
+		this.unit = Objects.requireNonNull(unit);
 		this.timeout = timeout;
-		this.unit = unit;
 	}
 }
