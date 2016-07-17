@@ -1,3 +1,9 @@
+/*
+ * This file is part of Fork
+ *
+ * Copyright (c) 2016, Andrea Medeghini
+ * All rights reserved.
+ */
 package com.nextbreakpoint.fork;
 
 import com.nextbreakpoint.Try;
