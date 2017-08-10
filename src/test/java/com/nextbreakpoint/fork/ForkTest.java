@@ -14,7 +14,11 @@ import java.util.function.Function;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
+import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.*;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 public class ForkTest {
 	@Rule
@@ -33,18 +37,35 @@ public class ForkTest {
 	}
 
 	@Test
-	public void shouldCallTaskInNewThread() {
-		final Thread mainThread = Thread.currentThread();
-		Callable<String> task = () -> {
-			assertTrue(Thread.currentThread() != mainThread);
-			return null;
-		};
-		fork().submit(taskWithDelay()).join();
+	public void shouldCallTaskInNewThread() throws Exception {
+		final CallableAssertion callableAssert = new CallableAssertion(200);
+		Callable<String> task = spy(callableAssert);
+		fork().submit(task).joinCompleted();
+		verify(task, times(1)).call();
+	}
+
+	@Test
+	public void shouldAwaitForResult() throws Exception {
+		final CallableAssertion callableAssertion1 = new CallableAssertion(200);
+		assertThat(callableAssertion1.isCompleted(), is(false));
+		final Fork<String, Exception> fork1 = fork().submit(callableAssertion1);
+		Thread.sleep(100);
+		assertThat(callableAssertion1.isCompleted(), is(false));
+		fork1.joinCompleted();
+		assertThat(callableAssertion1.isCompleted(), is(true));
+
+		final CallableAssertion callableAssertion2 = new CallableAssertion(100);
+		assertThat(callableAssertion2.isCompleted(), is(false));
+		final Fork<String, Exception> fork2 = fork().submit(callableAssertion2);
+		Thread.sleep(200);
+		assertThat(callableAssertion2.isCompleted(), is(true));
+		fork2.joinCompleted();
+		assertThat(callableAssertion2.isCompleted(), is(true));
 	}
 
 	@Test
 	public void shouldReturnSuccessWhenSingleTaskSubmitted() {
-		assertFalse(fork().submit(taskWithDelay()).join().findFirst().get().isFailure());
+		assertFalse(fork().submit(task()).join().findFirst().get().isFailure());
 	}
 
 	@Test
@@ -54,7 +75,7 @@ public class ForkTest {
 
 	@Test
 	public void shouldReturnCountOneWhenSingleTaskSubmitted() {
-		assertEquals(1, fork().submit(taskWithDelay()).join().count());
+		assertEquals(1, fork().submit(task()).join().count());
 	}
 
 	@Test
@@ -119,7 +140,7 @@ public class ForkTest {
 		return e -> new IOException("<test>", e);
 	}
 
-	private Callable<String> taskWithDelay() {
+	private Callable<String> task() {
 		return () -> "X";
 	}
 
@@ -132,10 +153,32 @@ public class ForkTest {
 	}
 
 	private Fork<String, Exception> fork() {
-		return Fork.with(executor).type(String.class);
+		return Fork.with(executor);
 	}
 
 	private Collector<String, ?, String> joinCollector() {
 		return Collectors.reducing("", (a, t) -> a + t);
+	}
+
+	private class CallableAssertion implements Callable<String> {
+		private final Thread mainThread = Thread.currentThread();
+		private final long delay;
+		private volatile boolean completed;
+
+		public CallableAssertion(long delay) {
+			this.delay = delay;
+		}
+
+		@Override
+		public String call() throws Exception {
+			Thread.sleep(delay);
+			assertTrue(Thread.currentThread() != mainThread);
+			completed = true;
+			return null;
+		}
+
+		public boolean isCompleted() {
+			return completed;
+		}
 	}
 }

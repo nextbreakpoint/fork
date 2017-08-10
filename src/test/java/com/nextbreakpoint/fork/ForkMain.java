@@ -13,7 +13,7 @@ public class ForkMain {
 	public static void main(String[] args) {
 		ExecutorService executor = threadPoolExecutor();
 
-		Fork.with(executor).type(String.class)
+		Fork.<String>with(executor)
 			.submit(() -> doSomething("A"))
 			.submit(() -> doSomething("B"))
 			.submit(() -> alwaysFail())
@@ -23,7 +23,7 @@ public class ForkMain {
 			.reduce((a, t) -> a + t)
 			.ifPresent(System.out::println);
 
-		Fork.with(executor).type(String.class)
+		Fork.<String>with(executor)
 			.submit(() -> doSomething("A"))
 			.submit(() -> doSomething("B"))
 			.submit(() -> alwaysFail())
@@ -32,7 +32,7 @@ public class ForkMain {
 			.reduce((a, t) -> a + t)
 			.ifPresent(System.out::println);
 
-		Fork.with(executor).type(String.class)
+		Fork.<String>with(executor)
 			.submit(() -> doSomething("A"))
 			.submit(() -> doSomething("B"))
 			.submit(() -> alwaysFail())
@@ -41,7 +41,7 @@ public class ForkMain {
 			.map(result -> result.map(s -> "Success").orElse("Failure"))
 			.forEach(System.out::println);
 
-		Fork.with(executor).type(String.class)
+		Fork.<String>with(executor)
 			.submit(() -> doSomething("A"))
 			.submit(() -> doSomething("B"))
 			.submit(() -> alwaysFail())
@@ -49,7 +49,7 @@ public class ForkMain {
 			.join()
 			.forEach(result -> result.ifFailure(handleIOException()));
 
-		Fork.with(executor).type(String.class)
+		Fork.<String>with(executor)
 			.submit(() -> doSomething("A"))
 			.submit(() -> doSomething("B"))
 			.submit(() -> alwaysFail())
@@ -59,7 +59,7 @@ public class ForkMain {
 			.filter(value -> "A".equals(value))
 			.forEach(System.out::println);
 
-		Fork.with(executor).type(String.class)
+		Fork.<String>with(executor)
 			.submit(() -> doSomething("A"), () -> doSomething("B"), () -> alwaysFail())
 			.timeout(200L, TimeUnit.MILLISECONDS)
 			.join()
