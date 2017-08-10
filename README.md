@@ -1,4 +1,4 @@
-# Fork 1.3.0
+# Fork 1.4.0
 
 Fork implements a fluent interface for executing parallel tasks and collecting results.
 
@@ -11,7 +11,7 @@ If you are using Maven, add a dependency in your POM:
     <dependency>
         <groupId>com.nextbreakpoint</groupId>
         <artifactId>com.nextbreakpoint.fork</artifactId>
-        <version>1.3.0</version>
+        <version>1.4.0</version>
     </dependency>
 
 If you are using other tools, please consult tool's documentation.
@@ -20,7 +20,7 @@ If you are using other tools, please consult tool's documentation.
 
 Fork is distributed under the terms of BSD 3-Clause License.
 
-    Copyright (c) 2016, Andrea Medeghini
+    Copyright (c) 2016-2017, Andrea Medeghini
     All rights reserved.
     
     Redistribution and use in source and binary forms, with or without
@@ -56,7 +56,7 @@ Given the program:
         public static void main(String[] args) {
             ExecutorService executor = threadPoolExecutor();
     
-            Fork.with(executor).type(String.class)
+            Fork.<String>with(executor)
                 .submit(() -> doSomething("A"))
                 .submit(() -> doSomething("B"))
                 .submit(() -> alwaysFail())
@@ -66,7 +66,7 @@ Given the program:
                 .reduce((a, t) -> a + t)
                 .ifPresent(System.out::println);
     
-            Fork.with(executor).type(String.class)
+            Fork.<String>with(executor)
                 .submit(() -> doSomething("A"))
                 .submit(() -> doSomething("B"))
                 .submit(() -> alwaysFail())
@@ -75,7 +75,7 @@ Given the program:
                 .reduce((a, t) -> a + t)
                 .ifPresent(System.out::println);
     
-            Fork.with(executor).type(String.class)
+            Fork.<String>with(executor)
                 .submit(() -> doSomething("A"))
                 .submit(() -> doSomething("B"))
                 .submit(() -> alwaysFail())
@@ -84,7 +84,7 @@ Given the program:
                 .map(result -> result.map(s -> "Success").orElse("Failure"))
                 .forEach(System.out::println);
     
-            Fork.with(executor).type(String.class)
+            Fork.<String>with(executor)
                 .submit(() -> doSomething("A"))
                 .submit(() -> doSomething("B"))
                 .submit(() -> alwaysFail())
@@ -92,7 +92,7 @@ Given the program:
                 .join()
                 .forEach(result -> result.ifFailure(handleIOException()));
     
-            Fork.with(executor).type(String.class)
+            Fork.<String>with(executor)
                 .submit(() -> doSomething("A"))
                 .submit(() -> doSomething("B"))
                 .submit(() -> alwaysFail())
@@ -102,7 +102,7 @@ Given the program:
                 .filter(value -> "A".equals(value))
                 .forEach(System.out::println);
     
-            Fork.with(executor).type(String.class)
+            Fork.<String>with(executor)
                 .submit(() -> doSomething("A"), () -> doSomething("B"), () -> alwaysFail())
                 .timeout(200L, TimeUnit.MILLISECONDS)
                 .join()
