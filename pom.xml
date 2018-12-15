@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.nextbreakpoint</groupId>
 	<artifactId>com.nextbreakpoint.fork</artifactId>
-	<version>1.4.0</version>
+	<version>1.4.1</version>
 	<packaging>jar</packaging>
 	<name>Fork</name>
 	<description>Fork implements a fluent interface for executing parallel tasks and collecting results</description>
@@ -80,6 +80,18 @@
 					</includes>
 				</configuration>
 			</plugin>
+			<plugin>
+			  <groupId>org.apache.maven.plugins</groupId>
+			  <artifactId>maven-jar-plugin</artifactId>
+				<version>3.1.0</version>
+			  <configuration>
+			    <archive>
+			      <manifestEntries>
+			        <Automatic-Module-Name>com.nextbreakpoint.fork</Automatic-Module-Name>
+			      </manifestEntries>
+			    </archive>
+			  </configuration>
+			</plugin>
 		</plugins>
 	</build>
 	<dependencies>
@@ -115,7 +127,7 @@
 					<plugin>
 						<groupId>org.apache.maven.plugins</groupId>
 						<artifactId>maven-gpg-plugin</artifactId>
-						<version>1.5</version>
+						<version>1.6</version>
 						<executions>
 							<execution>
 								<id>sign-artifacts</id>
